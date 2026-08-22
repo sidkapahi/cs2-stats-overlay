@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700;1,800&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
+
+/* ---- Widget shell -------------------------------------------------------- */
+.widget {
+  background: #242424;
+  border-radius: 16px;
+  padding: 20px 26px;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 14px;
+  color: #fff;
+}
+
+.widget-main {
+  display: flex;
+  align-items: center;
+  gap: 38px;
+}
+
+/* ---- Identity: avatar + name + rating ----------------------------------- */
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.identity-text {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rating-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Plain (no-badge) rating — rank-coloured number */
+.rating-plain {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.rank-gray      .rating-plain { color: #afc4d5; }
+.rank-lightblue .rating-plain { color: #76bde5; }
+.rank-blue      .rating-plain { color: #6085f0; }
+.rank-purple    .rating-plain { color: #d76afe; }
+.rank-pink      .rating-plain { color: #fe13f7; }
+.rank-red       .rating-plain { color: #ff4f46; }
+.rank-gold      .rating-plain { color: #fddc02; }
+
+/* Rank badge — parallelogram emblem with the rating overlaid */
+.rating-badge {
+  position: relative;
+  width: 122px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.badge-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.rating-badge-text {
+  position: absolute;
+  left: 26%;
+  right: 8%;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.35);
+}
+
+.rank-gray      .rating-badge-text { color: #afc4d5; }
+.rank-lightblue .rating-badge-text { color: #76bde5; }
+.rank-blue      .rating-badge-text { color: #6085f0; }
+.rank-purple    .rating-badge-text { color: #d76afe; }
+.rank-pink      .rating-badge-text { color: #fe13f7; }
+.rank-red       .rating-badge-text { color: #ff4f46; }
+.rank-gold      .rating-badge-text { color: #fddc02; }
+
+/* Rank-point diff (+250) */
+.rating-diff {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+.rating-diff.positive { color: #6fce72; }
+.rating-diff.negative { color: #d45f5f; }
+
+/* ---- Win / loss pills ---------------------------------------------------- */
+.wl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wl-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.wl-win  { background: #6fce72; color: #274a28; }
+.wl-loss { background: #d45f5f; color: #2d1414; }
+
+/* ---- Stats -------------------------------------------------------------- */
+.stats {
+  display: flex;
+  gap: 26px;
+  flex-shrink: 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+.stat-lbl {
+  font-size: 14px;
+  font-weight: 700;
+  color: #8d8d8d;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+/* ---- Match history strip ------------------------------------------------ */
+.widget-history {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hist-letters {
+  display: flex;
+  gap: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hist-letters .w { color: #6fce72; }
+.hist-letters .l { color: #d45f5f; }
+.hist-letters .t { color: #f5c84b; }
+
+.hist-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: conic-gradient(from 210deg, #ff5f6d, #ffc371, #47e0c0, #5b8def, #c86dd7, #ff5f6d);
+}
+
+.brand-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+}
+
+/* ---- Loading ------------------------------------------------------------ */
+.widget.loading { opacity: 0.6; }
