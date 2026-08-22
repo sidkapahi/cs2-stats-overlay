@@ -155,7 +155,10 @@ export async function resolveVanityUrl(vanity: string): Promise<string> {
   // error. Surface the Worker's own message so that's diagnosable instead of
   // masking every failure as "no profile found".
   if (res.status === 404) {
-    throw new Error("No Steam profile found for that custom URL");
+    throw new Error(
+      "Steam didn't recognise that custom URL name — check it's exact, or " +
+        "paste your Steam64 ID / a /profiles/… link instead",
+    );
   }
   const detail =
     typeof body.error === "string" ? body.error : `HTTP ${res.status}`;
