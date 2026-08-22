@@ -1,7 +1,12 @@
 import { trackEvent } from "../shared/analytics";
-import { fetchPremierData, type PremierData } from "../shared/api";
+import {
+  fetchPremierData,
+  resolveVanityUrl,
+  type PremierData,
+} from "../shared/api";
 import { configToParams } from "../shared/config";
 import { renderMessage, renderWidget } from "../shared/render";
+import { parseSteamInput } from "../shared/steamId";
 import { DEFAULT_CONFIG, type WidgetConfig } from "../shared/types";
 import "../widget/widget.css";
 import "./customizer.css";
@@ -9,8 +14,12 @@ import "./customizer.css";
 let currentConfig: WidgetConfig = { ...DEFAULT_CONFIG };
 let previewData: PremierData | null = null;
 let previewError: string | null = null;
+let previewLoading = false;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let lastTrackedSteamId: string | null = null;
+// Bumped on every new resolve so a slow vanity lookup that finishes after the
+// user has typed something else can't overwrite the newer input's result.
+let resolveToken = 0;
 
 function getWidgetUrl(): string {
   const params = configToParams(currentConfig);
@@ -27,8 +36,13 @@ function renderPreview() {
     return;
   }
 
+  if (previewLoading) {
+    previewEl.innerHTML = renderMessage("Loading", "…");
+    return;
+  }
+
   if (!previewData) {
-    previewEl.innerHTML = renderMessage("Enter a Steam ID", "—");
+    previewEl.innerHTML = renderMessage("Enter a Steam ID or profile link", "—");
     return;
   }
 
@@ -40,32 +54,96 @@ function updateGeneratedUrl() {
   urlEl.value = currentConfig.steamId ? getWidgetUrl() : "";
 }
 
-async function loadPreview() {
+// Turns whatever is in the Steam-ID box (a raw Steam64 ID, a full profile URL,
+// or a custom /id/ vanity URL) into a Steam64 ID, then loads the preview for it.
+// Vanity URLs are resolved server-side via the proxy Worker.
+async function resolveAndLoad(rawInput: string) {
+  const token = ++resolveToken;
+  const parsed = parseSteamInput(rawInput);
+
+  if (parsed.kind === "empty") {
+    currentConfig.steamId = "";
+    previewData = null;
+    previewError = null;
+    previewLoading = false;
+    renderPreview();
+    updateGeneratedUrl();
+    return;
+  }
+
+  if (parsed.kind === "invalid") {
+    currentConfig.steamId = "";
+    previewData = null;
+    previewError =
+      "Enter a Steam64 ID or a steamcommunity.com profile link";
+    previewLoading = false;
+    renderPreview();
+    updateGeneratedUrl();
+    return;
+  }
+
+  let steamId: string;
+  if (parsed.kind === "vanity") {
+    // Resolving a vanity URL is a network round-trip; show a loading state.
+    previewLoading = true;
+    previewError = null;
+    renderPreview();
+    try {
+      steamId = await resolveVanityUrl(parsed.vanity);
+    } catch (e) {
+      if (token !== resolveToken) return; // superseded by newer input
+      previewError = e instanceof Error ? e.message : "Failed to resolve";
+      previewData = null;
+      previewLoading = false;
+      currentConfig.steamId = "";
+      renderPreview();
+      updateGeneratedUrl();
+      return;
+    }
+    if (token !== resolveToken) return; // superseded by newer input
+  } else {
+    steamId = parsed.steamId;
+  }
+
+  currentConfig.steamId = steamId;
+  updateGeneratedUrl();
+  await loadPreview(token);
+}
+
+async function loadPreview(token = ++resolveToken) {
   if (!currentConfig.steamId) {
     previewData = null;
     previewError = null;
+    previewLoading = false;
     renderPreview();
     return;
   }
 
+  previewLoading = true;
+  previewError = null;
+  renderPreview();
+
   try {
-    previewError = null;
-    previewData = await fetchPremierData(currentConfig.steamId);
+    const data = await fetchPremierData(currentConfig.steamId);
+    if (token !== resolveToken) return; // superseded by newer input
+    previewData = data;
     if (currentConfig.steamId !== lastTrackedSteamId) {
       trackEvent("steam_id_entered", { steamId: currentConfig.steamId });
       lastTrackedSteamId = currentConfig.steamId;
     }
   } catch (e) {
+    if (token !== resolveToken) return; // superseded by newer input
     previewError = e instanceof Error ? e.message : "Failed to load";
     previewData = null;
   }
+  previewLoading = false;
   renderPreview();
   updateGeneratedUrl();
 }
 
-function debouncedLoadPreview() {
+function debouncedLoadPreview(rawInput: string) {
   if (debounceTimer) clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(loadPreview, 600);
+  debounceTimer = setTimeout(() => resolveAndLoad(rawInput), 600);
 }
 
 // Display-option checkboxes → config keys, in the order they appear in the UI.
@@ -81,9 +159,11 @@ const checkboxMap: Record<string, keyof WidgetConfig> = {
 function bindControls() {
   const steamInput = document.getElementById("steam-id") as HTMLInputElement;
   steamInput.addEventListener("input", () => {
-    currentConfig.steamId = steamInput.value.trim();
+    // The raw input may be a URL or vanity name, not a Steam64 ID yet, so clear
+    // the generated URL until resolveAndLoad has a real Steam64 ID to put in it.
+    currentConfig.steamId = "";
     updateGeneratedUrl();
-    debouncedLoadPreview();
+    debouncedLoadPreview(steamInput.value);
   });
 
   for (const [id, key] of Object.entries(checkboxMap)) {
@@ -162,9 +242,9 @@ function init() {
           <h2 class="panel-title">Settings</h2>
 
           <div class="field">
-            <label class="field-label" for="steam-id">Steam ID (Steam64)</label>
-            <input type="text" id="steam-id" class="input" placeholder="e.g. 76561198012345678">
-            <span class="field-hint">Find your Steam64 ID at steamid.io</span>
+            <label class="field-label" for="steam-id">Steam ID or profile link</label>
+            <input type="text" id="steam-id" class="input" placeholder="Steam64 ID or steamcommunity.com/… link">
+            <span class="field-hint">Paste your Steam profile URL and we'll pull the Steam64 ID out for you</span>
           </div>
 
           <div class="section">
@@ -242,8 +322,8 @@ function init() {
   if (idFromUrl) {
     const steamInput = document.getElementById("steam-id") as HTMLInputElement;
     steamInput.value = idFromUrl;
-    currentConfig.steamId = idFromUrl;
-    loadPreview();
+    // Accepts a Steam64 ID or a profile link here too — resolveAndLoad handles both.
+    resolveAndLoad(idFromUrl);
   } else {
     renderPreview();
   }
