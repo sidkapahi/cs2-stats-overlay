@@ -7,6 +7,7 @@ export function configToParams(config: WidgetConfig): URLSearchParams {
   if (!config.showName) params.set('name', '0');
   if (!config.showBadge) params.set('badge', '0');
   if (!config.showChange) params.set('change', '0');
+  if (!config.showWinLoss) params.set('wl', '0');
   if (!config.showStats) params.set('stats', '0');
   if (!config.showMatchHistory) params.set('history', '0');
   if (config.matchCount !== 10) params.set('matchCount', String(config.matchCount));
@@ -21,6 +22,7 @@ export function paramsToConfig(params: URLSearchParams): WidgetConfig {
     showName: params.get('name') !== '0',
     showBadge: params.get('badge') !== '0',
     showChange: params.get('change') !== '0',
+    showWinLoss: params.get('wl') !== '0',
     showStats: params.get('stats') !== '0',
     showMatchHistory: params.get('history') !== '0',
     matchCount: parseInt(params.get('matchCount') ?? '10', 10),

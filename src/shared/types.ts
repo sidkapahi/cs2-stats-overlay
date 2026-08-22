@@ -94,6 +94,7 @@ export interface WidgetConfig {
   showName: boolean;
   showBadge: boolean;
   showChange: boolean;
+  showWinLoss: boolean;
   showStats: boolean;
   showMatchHistory: boolean;
   matchCount: number;
@@ -106,6 +107,7 @@ export const DEFAULT_CONFIG: WidgetConfig = {
   showName: true,
   showBadge: true,
   showChange: true,
+  showWinLoss: true,
   showStats: true,
   showMatchHistory: true,
   matchCount: 10,

@@ -152,6 +152,7 @@ const checkboxMap: Record<string, keyof WidgetConfig> = {
   "show-name": "showName",
   "show-badge": "showBadge",
   "show-change": "showChange",
+  "show-wl": "showWinLoss",
   "show-stats": "showStats",
   "show-history": "showMatchHistory",
 };
@@ -253,7 +254,8 @@ function init() {
             <label class="checkbox-row"><input type="checkbox" id="show-name" checked><span>Show player name</span></label>
             <label class="checkbox-row"><input type="checkbox" id="show-badge" checked><span>Show rank badge</span></label>
             <label class="checkbox-row"><input type="checkbox" id="show-change" checked><span>Show rank change (+/-)</span></label>
-            <label class="checkbox-row"><input type="checkbox" id="show-stats" checked><span>Show stats (WIN%, AIM, K/D)</span></label>
+            <label class="checkbox-row"><input type="checkbox" id="show-wl" checked><span>Show win/loss (W L)</span></label>
+            <label class="checkbox-row"><input type="checkbox" id="show-stats" checked><span>Show stats (K/D, AVG, AIM)</span></label>
             <label class="checkbox-row"><input type="checkbox" id="show-history" checked><span>Show match history (W L T ...)</span></label>
           </div>
 

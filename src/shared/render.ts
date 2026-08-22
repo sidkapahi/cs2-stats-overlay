@@ -1,5 +1,6 @@
 import type { PremierData } from './api';
 import { brandLogoSrc } from './brandLogo';
+import { defaultAvatarSrc } from './defaultAvatar';
 import { formatRating, getRankTier } from './ranks';
 import type { RankTier, WidgetConfig } from './types';
 
@@ -52,33 +53,41 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
     diffHtml = `<span class="rating-diff ${cls}">${prefix}${data.ratingDiff}</span>`;
   }
 
-  const avatarHtml =
-    config.showAvatar && data.avatarUrl
-      ? `<img class="avatar" src="${esc(data.avatarUrl)}" alt="">`
-      : '';
+  // When the avatar is enabled, always fill the slot: use the player's real
+  // Steam avatar when it resolved, otherwise fall back to the default blue
+  // "smiley" mark so a missing/private avatar still shows a face rather than a
+  // gap.
+  const avatarSrc = data.avatarUrl ? esc(data.avatarUrl) : defaultAvatarSrc;
+  const avatarHtml = config.showAvatar
+    ? `<img class="avatar" src="${avatarSrc}" alt="">`
+    : '';
 
   const nameHtml = config.showName ? `<div class="name">${esc(data.name)}</div>` : '';
 
   // W/L pills — total wins and losses across the returned recent matches.
-  const wlHtml = `
+  let wlHtml = '';
+  if (config.showWinLoss) {
+    wlHtml = `
     <div class="wl">
       <div class="wl-pill wl-win">W${data.wins}</div>
       <div class="wl-pill wl-loss">L${data.losses}</div>
     </div>`;
+  }
 
-  // Stats block: overall win rate, aim rating, and K/D over the tracked matches.
+  // Stats block: K/D, average kills, and aim rating over the tracked matches
+  // (order + metrics per the Figma design, node 1-470).
   let statsHtml = '';
   if (config.showStats) {
     const withKd = recent.filter((g) => g.kills != null && g.deaths != null);
     const totalKills = withKd.reduce((s, g) => s + g.kills!, 0);
     const totalDeaths = withKd.reduce((s, g) => s + g.deaths!, 0);
     const kd = totalDeaths > 0 ? (totalKills / totalDeaths).toFixed(2) : '—';
-    const winPct = `${Math.round(data.winRate * 100)}%`;
+    const avgKills = withKd.length > 0 ? (totalKills / withKd.length).toFixed(1) : '—';
     statsHtml = `
       <div class="stats">
-        <div class="stat"><span class="stat-val">${winPct}</span><span class="stat-lbl">WIN</span></div>
-        <div class="stat"><span class="stat-val">${data.aimRating.toFixed(1)}</span><span class="stat-lbl">AIM</span></div>
         <div class="stat"><span class="stat-val">${kd}</span><span class="stat-lbl">K/D</span></div>
+        <div class="stat"><span class="stat-val">${avgKills}</span><span class="stat-lbl">AVG</span></div>
+        <div class="stat"><span class="stat-val">${data.aimRating.toFixed(1)}</span><span class="stat-lbl">AIM</span></div>
       </div>`;
   }
 
@@ -103,7 +112,7 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
   const modifiers = [
     `rank-${tier.key}`,
     config.showBadge ? 'has-badge' : 'no-badge',
-    config.showAvatar && data.avatarUrl ? 'has-avatar' : 'no-avatar',
+    config.showAvatar ? 'has-avatar' : 'no-avatar',
   ].join(' ');
 
   return `
