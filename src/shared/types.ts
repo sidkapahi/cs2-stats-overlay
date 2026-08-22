@@ -34,7 +34,10 @@ export interface LeetifyMatch {
   data_source: string;
   outcome: 'win' | 'loss' | 'tie';
   rank: number | null;
-  rank_type: string | null;
+  // Numeric game-mode id from Leetify (e.g. Premier vs Competitive), not a
+  // label like 'premier'. Premier matches are detected by rank scale instead
+  // (see api.ts), so this is kept only to mirror the raw payload shape.
+  rank_type: number | null;
   map_name: string;
   leetify_rating: number;
   score: [number, number];

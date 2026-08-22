@@ -16,6 +16,11 @@ const LEETIFY_KEY = import.meta.env.VITE_LEETIFY_KEY as string | undefined;
 // the widget fetches the avatar from the Worker instead.
 const AVATAR_PROXY = import.meta.env.VITE_AVATAR_PROXY_URL as string | undefined;
 
+// Lowest match `rank` we treat as a Premier CS Rating. Premier ratings run into
+// the thousands, while Competitive and Wingman ranks are 1–18, so this cleanly
+// separates a Premier match's rank from the small tier numbers.
+const PREMIER_MIN_RANK = 1000;
+
 export interface PremierData {
   name: string;
   avatarUrl: string;
@@ -55,10 +60,22 @@ export async function fetchPremierData(steamId: string): Promise<PremierData> {
     enrichWithKills(steamId, recentGames, headers),
   ]);
   // Premier rank-point swing: the profile payload has no historical deltas, but
-  // each match carries the Premier rank it ended at, so the diff between the two
+  // each match carries the CS Rating it ended at, so the diff between the two
   // most recent Premier matches is the last game's point change (e.g. +250).
+  // recent_matches is newest-first, so [0] - [1] is that last game's swing.
+  //
+  // Premier matches are identified by their rank *scale*, not by `rank_type`:
+  // that field is a numeric game-mode id (not the string 'premier' the code
+  // used to test for — which never matched, so the diff was always 0). Only
+  // Premier uses a CS Rating in the thousands; Competitive and Wingman ranks
+  // are 1–18, and FACEIT (whose ELO is also large) is excluded explicitly.
   const premierRanks = recentGames
-    .filter((g) => g.rank_type === 'premier' && g.rank != null)
+    .filter(
+      (g) =>
+        typeof g.rank === 'number' &&
+        g.rank >= PREMIER_MIN_RANK &&
+        !/faceit/i.test(g.data_source ?? ''),
+    )
     .map((g) => g.rank as number);
   const ratingDiff = premierRanks.length >= 2 ? premierRanks[0] - premierRanks[1] : 0;
 
