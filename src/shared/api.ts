@@ -130,20 +130,36 @@ export async function resolveVanityUrl(vanity: string): Promise<string> {
     );
   }
 
-  let body: { steamId?: unknown; error?: unknown };
+  let res: Response;
   try {
-    const res = await fetch(
-      `${AVATAR_PROXY}?vanity=${encodeURIComponent(vanity)}`,
-    );
-    body = (await res.json()) as { steamId?: unknown; error?: unknown };
+    res = await fetch(`${AVATAR_PROXY}?vanity=${encodeURIComponent(vanity)}`);
   } catch {
     throw new Error("Couldn't reach the Steam resolver");
   }
 
-  if (typeof body.steamId === "string" && /^\d{17}$/.test(body.steamId)) {
+  let body: { steamId?: unknown; error?: unknown } = {};
+  try {
+    body = (await res.json()) as { steamId?: unknown; error?: unknown };
+  } catch {
+    // Non-JSON response; fall through to status-based handling below.
+  }
+
+  if (res.ok && typeof body.steamId === "string" && /^\d{17}$/.test(body.steamId)) {
     return body.steamId;
   }
-  throw new Error("No Steam profile found for that custom URL");
+
+  // 404 means the name genuinely has no matching Steam profile. Any other
+  // status usually means the proxy Worker itself is misconfigured or out of
+  // date — e.g. a Worker deployed before vanity support was added doesn't
+  // understand `?vanity=` and replies with an "Invalid or missing steam64_id"
+  // error. Surface the Worker's own message so that's diagnosable instead of
+  // masking every failure as "no profile found".
+  if (res.status === 404) {
+    throw new Error("No Steam profile found for that custom URL");
+  }
+  const detail =
+    typeof body.error === "string" ? body.error : `HTTP ${res.status}`;
+  throw new Error(`Couldn't resolve custom URL — ${detail}`);
 }
 
 // Resolves a Steam avatar URL via the optional proxy Worker. Never throws:
