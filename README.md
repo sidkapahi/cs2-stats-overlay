@@ -12,7 +12,7 @@ An OBS browser-source widget that shows your CS2 Premier rating, rank badge, <br
 [![built with TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/sidkapahi/cs2-stats-overlay/pulls)
 
-**[Open Customizer](https://sidkapahi.github.io/cs2-stats-overlay/)** · **[Figma Design](https://www.figma.com/design/5JQex6PZfwQGDoB4D3SrAl/CS2-Stats-Overlay)** · **[Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)**
+**[Open Customizer](https://sidkapahi.github.io/cs2-stats-overlay/)** · **[Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)**
 
 </div>
 
