@@ -144,15 +144,18 @@ body {
   align-items: center;
   justify-content: center;
   min-width: 60px;
-  padding: 7px 12px;
-  border-radius: 10px;
+  padding: 8px 14px;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  background: transparent;
   font-size: 20px;
   font-weight: 700;
   line-height: 1;
 }
 
-.wl-win  { background: #6fce72; color: #274a28; }
-.wl-loss { background: #d45f5f; color: #2d1414; }
+/* Outlined pills — coloured border and matching text, no fill (Figma 6:1265). */
+.wl-win  { border-color: #6fce72; color: #6fce72; }
+.wl-loss { border-color: #d45f5f; color: #d45f5f; }
 
 /* ---- Stats -------------------------------------------------------------- */
 .stats {
