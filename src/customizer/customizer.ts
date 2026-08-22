@@ -242,9 +242,9 @@ function init() {
           <h2 class="panel-title">Settings</h2>
 
           <div class="field">
-            <label class="field-label" for="steam-id">Steam ID or profile link</label>
-            <input type="text" id="steam-id" class="input" placeholder="Steam64 ID or steamcommunity.com/… link">
-            <span class="field-hint">Paste your Steam profile URL and we'll pull the Steam64 ID out for you</span>
+            <label class="field-label" for="steam-id">Steam ID, profile link, or vanity name</label>
+            <input type="text" id="steam-id" class="input" placeholder="Steam64 ID, profile link, or vanity name (e.g. kapahiii)">
+            <span class="field-hint">Paste your profile URL, a Steam64 ID, or just your custom URL name — we'll figure out the rest</span>
           </div>
 
           <div class="section">
