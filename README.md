@@ -62,12 +62,17 @@ variables → Actions) so it's injected into the build.
   1. Get your Authentication Code from [Steam](https://help.steampowered.com/en/wizard/HelpWithGameIssue?appid=730&issueid=128)
   2. Enter it on Leetify's [Data Sources](https://leetify.com/app/data-sources) page under the Matchmaking tab
   3. Once active, Leetify will pick up your matches shortly after they finish
-- **Steam64 ID** — find yours at [steamid.io](https://steamid.io)
+- **Steam64 ID or profile link** — paste your Steam profile URL straight into
+  the customizer and it pulls out the Steam64 ID for you. A
+  `steamcommunity.com/profiles/…` link (or a raw Steam64 ID) works out of the
+  box; a custom `steamcommunity.com/id/…` link needs the optional Steam proxy
+  Worker deployed (see below). You can still look up a raw ID at
+  [steamid.io](https://steamid.io) if you prefer.
 
 ## Usage
 
 1. Open the [customizer](https://sidkapahi.github.io/cs2-stats-overlay/)
-2. Enter your Steam64 ID
+2. Enter your Steam64 ID or paste your Steam profile link
 3. Toggle display options (avatar, name, rank badge, rank change, stats, match history)
 4. Set the number of recent matches and refresh interval
 5. Copy the generated widget URL
@@ -90,14 +95,17 @@ The widget URL supports these parameters:
 | `matchCount` | `10`    | Number of recent matches           |
 | `refresh`    | `60`    | Refresh interval in seconds        |
 
-## Player Avatars (optional)
+## Player Avatars & custom profile links (optional)
 
 Leetify's public API doesn't return a player avatar, and this static site can't
 call Steam's Web API directly (it needs a secret key and sends no CORS headers).
-To show avatars, deploy the small Cloudflare Worker in [`worker/`](./worker) and
-set `VITE_AVATAR_PROXY_URL` to its URL — full steps in
+The small Cloudflare Worker in [`worker/`](./worker) covers both: it fetches
+avatars **and** resolves custom `steamcommunity.com/id/…` profile links to a
+Steam64 ID. Deploy it and set `VITE_AVATAR_PROXY_URL` to its URL — full steps in
 [worker/README.md](./worker/README.md). Your Steam API key stays on the Worker
-and never reaches the browser. Skip this and the widget just runs without an avatar.
+and never reaches the browser. Skip this and the widget still runs — just without
+avatars, and custom-URL links must be entered as a Steam64 ID or a
+`/profiles/…` link instead.
 
 ## Tech Stack
 

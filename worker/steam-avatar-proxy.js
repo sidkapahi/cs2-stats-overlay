@@ -1,10 +1,13 @@
-// Cloudflare Worker: Steam avatar proxy
+// Cloudflare Worker: Steam proxy (avatars + vanity-URL resolution)
 //
 // The widget is a static GitHub Pages site, so it can't call Steam's Web API
 // directly: the API needs a key (which must stay secret) and sends no CORS
-// headers (so browsers block the request). This Worker sits in between —
-// it resolves a Steam64 ID to a Steam avatar image URL using the Steam Web
-// API, keeps the key server-side, and adds the CORS headers the browser needs.
+// headers (so browsers block the request). This Worker sits in between,
+// keeping the key server-side and adding the CORS headers the browser needs.
+// It answers two lookups, both using the Steam Web API:
+//   • GET ?steam64_id=<17-digit id>  → { avatarUrl }   (avatar for that id)
+//   • GET ?vanity=<custom-url-name>  → { steamId }      (resolve a vanity URL,
+//        i.e. the `gabelogannewell` in steamcommunity.com/id/gabelogannewell)
 //
 // Setup (see worker/README.md for details):
 //   1. Deploy this Worker (`wrangler deploy`, or paste it in the CF dashboard).
@@ -49,6 +52,11 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    // Vanity-URL resolution: steamcommunity.com/id/<name> → Steam64 ID.
+    const vanity = url.searchParams.get('vanity');
+    if (vanity !== null) return resolveVanity(vanity, env, cors);
+
     const steamId = url.searchParams.get('steam64_id');
 
     // Steam64 IDs are 17-digit numbers; reject anything else to avoid the
@@ -83,6 +91,38 @@ export default {
     return json({ avatarUrl: player.avatarfull ?? '' }, 200, cors);
   },
 };
+
+// Resolves a Steam custom (vanity) URL name to a Steam64 ID using Steam's
+// ResolveVanityURL API. Like the avatar lookup, this needs the secret API key,
+// so it has to run here rather than in the browser.
+async function resolveVanity(vanity, env, cors) {
+  // Vanity names are letters/digits/dashes/underscores/dots. Reject anything
+  // else so the Worker can't be used to smuggle arbitrary query params.
+  if (!/^[A-Za-z0-9_.-]{1,64}$/.test(vanity)) {
+    return json({ error: 'Invalid vanity name' }, 400, cors);
+  }
+
+  if (!env.STEAM_API_KEY) {
+    return json({ error: 'Worker is missing the STEAM_API_KEY secret' }, 500, cors);
+  }
+
+  const api =
+    'https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/' +
+    `?key=${env.STEAM_API_KEY}&vanityurl=${encodeURIComponent(vanity)}`;
+
+  try {
+    const res = await fetch(api);
+    if (!res.ok) return json({ error: `Steam API error: ${res.status}` }, 502, cors);
+    const data = await res.json();
+    // success === 1 means resolved; 42 (or anything else) means no such name.
+    if (data?.response?.success === 1 && data.response.steamid) {
+      return json({ steamId: data.response.steamid }, 200, cors);
+    }
+    return json({ error: 'No Steam profile found for that custom URL' }, 404, cors);
+  } catch {
+    return json({ error: 'Failed to reach the Steam API' }, 502, cors);
+  }
+}
 
 function json(body, status, cors) {
   return new Response(JSON.stringify(body), {

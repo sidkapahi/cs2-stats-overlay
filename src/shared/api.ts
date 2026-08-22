@@ -116,6 +116,36 @@ async function enrichWithKills(
   }
 }
 
+// Resolves a Steam custom (vanity) URL name (e.g. the `gabelogannewell` in
+// steamcommunity.com/id/gabelogannewell) to a Steam64 ID via the proxy Worker.
+// Steam's ResolveVanityURL API needs the secret key, so it can only run
+// server-side — the same Worker used for avatars also handles this. Throws a
+// friendly message when the proxy isn't configured or the name can't be
+// resolved, so the customizer can surface it to the user.
+export async function resolveVanityUrl(vanity: string): Promise<string> {
+  if (!AVATAR_PROXY) {
+    throw new Error(
+      "Custom profile URLs need the Steam proxy. Paste your Steam64 ID or a " +
+        "steamcommunity.com/profiles/… link instead.",
+    );
+  }
+
+  let body: { steamId?: unknown; error?: unknown };
+  try {
+    const res = await fetch(
+      `${AVATAR_PROXY}?vanity=${encodeURIComponent(vanity)}`,
+    );
+    body = (await res.json()) as { steamId?: unknown; error?: unknown };
+  } catch {
+    throw new Error("Couldn't reach the Steam resolver");
+  }
+
+  if (typeof body.steamId === "string" && /^\d{17}$/.test(body.steamId)) {
+    return body.steamId;
+  }
+  throw new Error("No Steam profile found for that custom URL");
+}
+
 // Resolves a Steam avatar URL via the optional proxy Worker. Never throws:
 // if the proxy is unset, unreachable, or the profile is private, the widget
 // just renders without an avatar rather than failing the whole update.

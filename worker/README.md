@@ -1,11 +1,17 @@
-# Steam avatar proxy (Cloudflare Worker)
+# Steam proxy (Cloudflare Worker)
 
 Leetify's public API doesn't return a player avatar, and the widget is a static
 GitHub Pages site, so it can't call Steam's Web API itself — that API needs a
-secret key and doesn't send CORS headers. This tiny Worker resolves a Steam64 ID
-to a Steam avatar URL, keeping the key server-side and adding CORS.
+secret key and doesn't send CORS headers. This tiny Worker keeps the key
+server-side (adding CORS) and answers two lookups:
 
-It's **optional**. Without it, the widget simply doesn't show an avatar.
+- **Avatar** — resolves a Steam64 ID to a Steam avatar URL.
+- **Vanity URL** — resolves a custom `steamcommunity.com/id/<name>` profile link
+  to a Steam64 ID, so the customizer can accept those links directly.
+
+It's **optional**. Without it, the widget simply doesn't show an avatar, and the
+customizer only accepts a Steam64 ID or a `steamcommunity.com/profiles/…` link
+(both of which need no server call) rather than custom `/id/…` links.
 
 ## Deploy
 
@@ -55,6 +61,8 @@ changing it, redeploy the Worker.
 
 ## Response shape
 
+**Avatar lookup:**
+
 ```
 GET /?steam64_id=76561198123894701
 → 200 { "avatarUrl": "https://avatars.steamstatic.com/<hash>_full.jpg" }
@@ -62,3 +70,13 @@ GET /?steam64_id=76561198123894701
 
 A private profile or unknown ID returns `{ "avatarUrl": "" }` (the widget then
 just hides the avatar). Invalid IDs return `400`.
+
+**Vanity-URL resolution:**
+
+```
+GET /?vanity=gabelogannewell
+→ 200 { "steamId": "76561197960287930" }
+```
+
+A name with no matching profile returns `404 { "error": … }`; invalid names
+return `400`.
