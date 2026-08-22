@@ -132,7 +132,13 @@ export async function resolveVanityUrl(vanity: string): Promise<string> {
 
   let res: Response;
   try {
-    res = await fetch(`${AVATAR_PROXY}?vanity=${encodeURIComponent(vanity)}`);
+    // `cache: no-store` so the browser never reads (or writes) a cached Worker
+    // response for this URL. An out-of-date Worker used to send its errors with
+    // a 1-hour max-age, and that stale error would otherwise keep masking a
+    // Worker that's since been fixed.
+    res = await fetch(`${AVATAR_PROXY}?vanity=${encodeURIComponent(vanity)}`, {
+      cache: "no-store",
+    });
   } catch {
     throw new Error("Couldn't reach the Steam resolver");
   }
