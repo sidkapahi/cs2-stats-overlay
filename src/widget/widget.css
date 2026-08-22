@@ -215,17 +215,10 @@ body {
   flex-shrink: 0;
 }
 
-.brand-mark {
-  width: 26px;
+.hist-logo {
+  display: block;
   height: 26px;
-  border-radius: 7px;
-  background: conic-gradient(from 210deg, #ff5f6d, #ffc371, #47e0c0, #5b8def, #c86dd7, #ff5f6d);
-}
-
-.brand-name {
-  font-size: 18px;
-  font-weight: 800;
-  color: #fff;
+  width: auto;
 }
 
 /* ---- Loading ------------------------------------------------------------ */

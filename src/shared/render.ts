@@ -1,4 +1,5 @@
 import type { PremierData } from './api';
+import { brandLogoSvg } from './brandLogo';
 import { formatRating, getRankTier } from './ranks';
 import type { RankTier, WidgetConfig } from './types';
 
@@ -24,12 +25,11 @@ export function badgeSvg(tier: RankTier): string {
   </svg>`;
 }
 
-// The small "kapKit" wordmark in the match-history footer (matches the Figma).
+// The kapKit brand logo shown in the match-history footer — the uploaded
+// assets/kapKit_logo.svg, inlined via brandLogoSvg so mark + wordmark stay a
+// single self-contained asset.
 function brandHtml(): string {
-  return `<div class="hist-brand">
-    <span class="brand-mark" aria-hidden="true"></span>
-    <span class="brand-name">kapKit</span>
-  </div>`;
+  return `<div class="hist-brand">${brandLogoSvg}</div>`;
 }
 
 // Builds the full widget markup for a config + data pair. Shared by the live
