@@ -129,8 +129,12 @@ function json(body, status, cors) {
     status,
     headers: {
       'Content-Type': 'application/json',
-      // Steam avatars rarely change, so let the edge cache the answer.
-      'Cache-Control': 'public, max-age=3600',
+      // Cache only successful lookups (avatars / resolved IDs rarely change).
+      // Never cache errors: a 4xx/5xx with a long max-age would stick in the
+      // browser for an hour and keep masking an already-fixed Worker or a
+      // transient Steam hiccup — exactly the kind of stale error that makes a
+      // redeploy look like it didn't work.
+      'Cache-Control': status === 200 ? 'public, max-age=3600' : 'no-store',
       ...cors,
     },
   });
