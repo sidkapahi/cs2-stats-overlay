@@ -32,6 +32,8 @@ into OBS as a Browser Source. Data is fetched live from the
   Purple, Pink, Red, Gold) — or a plain rank-coloured number when the badge is off
 - **Rank-point change** from your last Premier match (e.g. `+250`)
 - **Win / loss pills** and core stats: win rate, aim rating, K/D
+- **Twitch session W/L** (optional) — enter your Twitch name and the W/L resets
+  when you go live and freezes when you go offline (see below)
 - **Recent match-history strip** (W / L / T)
 - **Customizer UI** to configure options and generate widget URLs
 - **Auto-refresh** on a configurable interval
@@ -85,6 +87,7 @@ The widget URL supports these parameters:
 | Parameter    | Default | Description                        |
 | ------------ | ------- | ---------------------------------- |
 | `steamId`    | —       | Steam64 ID (required)              |
+| `twitch`     | —       | Twitch login → session-scoped W/L  |
 | `avatar`     | `1`     | Show avatar (`0` to hide)          |
 | `name`       | `1`     | Show player name                   |
 | `badge`      | `1`     | Show rank badge (`0` for plain)    |
@@ -106,6 +109,29 @@ and never reaches the browser. Skip this and the widget still runs — just with
 avatars, and custom-URL links must be entered as a Steam64 ID or a
 `/profiles/…` link instead.
 
+## Twitch session win/loss (optional)
+
+By default the W/L pills tally every match in Leetify's recent window. Enter your
+**Twitch username** in the customizer and they become a **per-stream record**
+instead:
+
+- Resets to `W0 L0` when your channel **goes live**
+- Counts only matches finished **during that stream**
+- **Freezes** (keeping the last stream's record) when you **go offline**
+
+State is kept per player in the browser's `localStorage`, so refreshing the OBS
+source mid-stream doesn't lose your session. Live status is polled every ~15
+seconds, independent of the slower stats refresh. The streamer never logs in —
+it only reads the **public** "is this channel live?" status, using the username
+as a lookup key.
+
+This uses a **second Cloudflare Worker** (`worker/twitch-live-proxy.js`, separate
+from the avatar proxy so the credentials live apart). You register a Twitch app,
+deploy the Worker with your `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` as
+secrets, and point the site at it with `VITE_TWITCH_PROXY_URL`. Full steps in
+[worker/README.md](./worker/README.md#twitch-live-status-proxy-cloudflare-worker).
+Without it, the pills simply keep their normal rolling-window behaviour.
+
 ## Tech Stack
 
 | Tool | Purpose |
@@ -113,7 +139,7 @@ avatars, and custom-URL links must be entered as a Steam64 ID or a
 | [TypeScript](https://www.typescriptlang.org) | Application logic |
 | [Vite](https://vitejs.dev) | Multi-page build & dev server |
 | [Leetify API](https://leetify.com) | Live CS2 stats & match data |
-| [Cloudflare Workers](https://workers.cloudflare.com) | Optional avatar proxy |
+| [Cloudflare Workers](https://workers.cloudflare.com) | Optional avatar + Twitch live-status proxies |
 
 ## License
 

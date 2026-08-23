@@ -11,9 +11,25 @@ function sanitizeStats(keys: string[]): StatKey[] {
   return [...seen].slice(0, STAT_MAX);
 }
 
+// Normalizes whatever the user types for their Twitch channel — a bare login, a
+// twitch.tv/<name> link, or an @handle — into the lowercase login Twitch's API
+// expects. Returns '' for anything that isn't a valid login (4–25 chars of
+// letters, digits, or underscores) so an unusable value simply disables the
+// session feature rather than firing broken lookups.
+export function normalizeTwitchLogin(raw: string): string {
+  let s = raw.trim().toLowerCase();
+  // Pull the channel name out of a pasted URL, e.g. https://twitch.tv/foo?x=1.
+  const urlMatch = /(?:twitch\.tv\/)([^/?#]+)/.exec(s);
+  if (urlMatch) s = urlMatch[1];
+  s = s.replace(/^@/, '');
+  return /^[a-z0-9_]{4,25}$/.test(s) ? s : '';
+}
+
 export function configToParams(config: WidgetConfig): URLSearchParams {
   const params = new URLSearchParams();
   params.set('steamId', config.steamId);
+  // Twitch login drives session-scoped W/L; only include it when set.
+  if (config.twitchLogin) params.set('twitch', config.twitchLogin);
   if (!config.showAvatar) params.set('avatar', '0');
   if (!config.showName) params.set('name', '0');
   // Badge defaults OFF now, so encode the ON case explicitly.
@@ -63,6 +79,7 @@ export function paramsToConfig(params: URLSearchParams): WidgetConfig {
 
   return {
     steamId: params.get('steamId') ?? DEFAULT_CONFIG.steamId,
+    twitchLogin: normalizeTwitchLogin(params.get('twitch') ?? ''),
     showAvatar: params.get('avatar') !== '0',
     showName: params.get('name') !== '0',
     showBadge: params.get('badge') === '1',

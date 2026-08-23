@@ -9,6 +9,8 @@
 //   • GET ?vanity=<custom-url-name>  → { steamId }      (resolve a vanity URL,
 //        i.e. the `gabelogannewell` in steamcommunity.com/id/gabelogannewell)
 //
+// (Twitch live status lives in a separate Worker — see twitch-live-proxy.js.)
+//
 // Setup (see worker/README.md for details):
 //   1. Deploy this Worker (`wrangler deploy`, or paste it in the CF dashboard).
 //   2. Add your Steam Web API key as a secret named STEAM_API_KEY:

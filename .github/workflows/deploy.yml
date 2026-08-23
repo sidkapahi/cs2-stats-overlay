@@ -29,6 +29,10 @@ jobs:
           # Not a secret, so a repository variable is the natural home, but a
           # secret with the same name works too.
           VITE_AVATAR_PROXY_URL: ${{ vars.VITE_AVATAR_PROXY_URL || secrets.VITE_AVATAR_PROXY_URL }}
+          # Public URL of the optional Twitch live-status proxy Worker (a separate
+          # Worker from the avatar proxy — see worker/README.md). Also not a
+          # secret, so a repository variable is the natural home.
+          VITE_TWITCH_PROXY_URL: ${{ vars.VITE_TWITCH_PROXY_URL || secrets.VITE_TWITCH_PROXY_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

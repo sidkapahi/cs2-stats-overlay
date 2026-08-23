@@ -1,0 +1,10 @@
+# Cloudflare Worker config for the Twitch live-status proxy.
+#
+# Deploy:    wrangler deploy --config wrangler.twitch.toml
+# Add creds: wrangler secret put TWITCH_CLIENT_ID --config wrangler.twitch.toml
+#            wrangler secret put TWITCH_CLIENT_SECRET --config wrangler.twitch.toml
+#            (never commit the secrets)
+
+name = "cs2-twitch-live-proxy"
+main = "twitch-live-proxy.js"
+compatibility_date = "2024-11-01"
