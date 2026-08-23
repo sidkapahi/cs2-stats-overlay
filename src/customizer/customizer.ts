@@ -476,7 +476,7 @@ function init() {
           <div class="field">
             <label class="field-label" for="twitch-login">Twitch username <span class="field-optional">(optional)</span></label>
             <input type="text" id="twitch-login" class="input" placeholder="your channel name" autocomplete="off" spellcheck="false">
-            <span class="field-hint">When set, win/loss resets each time you go live and freezes (keeping the last stream's record) when you go offline. Needs the Steam proxy Worker with Twitch keys — see the README.</span>
+            <span class="field-hint">When set, win/loss resets each time you go live and freezes (keeping the last stream's record) when you go offline. Needs the Twitch proxy Worker deployed — see the README.</span>
           </div>
 
           <div class="field">

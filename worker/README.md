@@ -53,17 +53,24 @@ That's it. The widget calls `GET {VITE_AVATAR_PROXY_URL}?steam64_id=<id>` and
 renders the returned avatar. The **Steam key stays on Cloudflare** and never
 reaches the browser.
 
-## Twitch live status (optional)
+# Twitch live-status proxy (Cloudflare Worker)
 
-Setting a Twitch username in the customizer switches the win/loss pills to a
-**per-stream record**: they reset to `W0 L0` when the channel goes live, count
-only matches finished during that stream, and freeze (keeping the last stream's
-record) once the channel goes offline. The state is stored per player in the
-browser's `localStorage`, so an OBS source refresh mid-stream doesn't lose it.
+This is a **second, separate Worker** (`twitch-live-proxy.js`), so the Twitch
+credentials live apart from the Steam key. It's what powers the widget's optional
+**session win/loss**: setting a Twitch username in the customizer switches the
+W/L pills to a **per-stream record** — they reset to `W0 L0` when the channel
+goes live, count only matches finished during that stream, and freeze (keeping
+the last stream's record) once the channel goes offline. The session is stored
+per player in the browser's `localStorage`, so an OBS source refresh mid-stream
+doesn't lose it.
 
 Checking whether a channel is live uses Twitch's Helix **Get Streams**, which
 needs an *app access token* — and that requires a client id **and secret** (the
-client-credentials flow), so it has to run on the Worker.
+client-credentials flow), so it has to run on a Worker. Note this reads only
+**public** data ("is channel X live?"); the streamer never logs in or authorizes
+anything — the username is just a lookup key.
+
+## Deploy
 
 1. **Register a Twitch application** at
    <https://dev.twitch.tv/console/apps> → **Register Your Application**. Any name
@@ -71,30 +78,48 @@ client-credentials flow), so it has to run on the Worker.
    client-credentials flow). Note the **Client ID** and generate a **Client
    Secret**.
 
-2. **Add both as Worker secrets:**
+2. **Deploy this Worker** (its own wrangler config points at
+   `twitch-live-proxy.js`):
 
    ```bash
-   npx wrangler secret put TWITCH_CLIENT_ID
-   npx wrangler secret put TWITCH_CLIENT_SECRET
+   cd worker
+   npx wrangler deploy --config wrangler.twitch.toml
    ```
 
-   (Dashboard equivalent: your Worker → Settings → Variables and Secrets → add
-   two **secrets** with those names.) Then redeploy.
+   (Or create a second Worker in the Cloudflare dashboard and paste in
+   `twitch-live-proxy.js`.)
 
-No new build variable is needed — the widget reuses `VITE_AVATAR_PROXY_URL` and
-calls `GET {VITE_AVATAR_PROXY_URL}?twitch=<login>`. The widget polls this every
-~15 seconds (independent of the slower stats refresh), well within Twitch's
-app-token rate limit. If the secrets aren't set the lookup returns `501` and the
-widget falls back to the rolling-window W/L.
+3. **Add the credentials as secrets** — never commit them:
+
+   ```bash
+   npx wrangler secret put TWITCH_CLIENT_ID --config wrangler.twitch.toml
+   npx wrangler secret put TWITCH_CLIENT_SECRET --config wrangler.twitch.toml
+   ```
+
+   (Dashboard equivalent: the Twitch Worker → Settings → Variables and Secrets →
+   add two **secrets** with those names.)
+
+4. **Point the widget at this Worker** via `VITE_TWITCH_PROXY_URL` (distinct from
+   the avatar proxy's `VITE_AVATAR_PROXY_URL`):
+
+   - **Local dev:** add it to `.env.local`.
+   - **Deployed site:** add a repository **variable** `VITE_TWITCH_PROXY_URL`
+     under Settings → Secrets and variables → Actions.
+
+The widget calls `GET {VITE_TWITCH_PROXY_URL}?twitch=<login>` every ~15 seconds
+(independent of the slower stats refresh), well within Twitch's app-token rate
+limit. If the credentials aren't set the lookup returns `501` and the widget
+falls back to the rolling-window W/L — as it also does when this Worker isn't
+deployed at all.
 
 ## Allowed origins (CORS)
 
-The Worker only answers browser requests from the site origins listed in
-`ALLOWED_ORIGINS` at the top of `steam-avatar-proxy.js` — that's what stops other
-websites from spending your Steam key / Cloudflare quota. Edit that list (scheme +
-host only, no trailing slash) to match wherever the widget is hosted, e.g.
-`https://<you>.github.io`, plus `http://localhost:5173` for local dev. After
-changing it, redeploy the Worker.
+**Both** Workers gate browser requests by an `ALLOWED_ORIGINS` set at the top of
+their file — that's what stops other websites from spending your keys / quota.
+Edit that list in each of `steam-avatar-proxy.js` and `twitch-live-proxy.js`
+(scheme + host only, no trailing slash) to match wherever the widget is hosted,
+e.g. `https://<you>.github.io`, plus `http://localhost:5173` for local dev. After
+changing it, redeploy that Worker.
 
 ## Response shape
 

@@ -122,13 +122,16 @@ instead:
 
 State is kept per player in the browser's `localStorage`, so refreshing the OBS
 source mid-stream doesn't lose your session. Live status is polled every ~15
-seconds, independent of the slower stats refresh.
+seconds, independent of the slower stats refresh. The streamer never logs in —
+it only reads the **public** "is this channel live?" status, using the username
+as a lookup key.
 
-This reuses the same Cloudflare Worker as avatars — you just add your Twitch app
-credentials (`TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET`) as Worker secrets.
-Full steps in [worker/README.md](./worker/README.md#twitch-live-status-optional).
-Without the Worker configured for Twitch, the pills simply keep their normal
-rolling-window behaviour.
+This uses a **second Cloudflare Worker** (`worker/twitch-live-proxy.js`, separate
+from the avatar proxy so the credentials live apart). You register a Twitch app,
+deploy the Worker with your `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` as
+secrets, and point the site at it with `VITE_TWITCH_PROXY_URL`. Full steps in
+[worker/README.md](./worker/README.md#twitch-live-status-proxy-cloudflare-worker).
+Without it, the pills simply keep their normal rolling-window behaviour.
 
 ## Tech Stack
 
@@ -137,7 +140,7 @@ rolling-window behaviour.
 | [TypeScript](https://www.typescriptlang.org) | Application logic |
 | [Vite](https://vitejs.dev) | Multi-page build & dev server |
 | [Leetify API](https://leetify.com) | Live CS2 stats & match data |
-| [Cloudflare Workers](https://workers.cloudflare.com) | Optional avatar proxy |
+| [Cloudflare Workers](https://workers.cloudflare.com) | Optional avatar + Twitch live-status proxies |
 
 ## License
 

@@ -1,15 +1,15 @@
-// Cloudflare Worker: Steam proxy (avatars + vanity-URL resolution) + Twitch
-// live status.
+// Cloudflare Worker: Steam proxy (avatars + vanity-URL resolution)
 //
-// The widget is a static GitHub Pages site, so it can't call these APIs
-// directly: they need keys/secrets (which must stay server-side) and Steam sends
-// no CORS headers (so browsers block the request). This Worker sits in between,
-// keeping the secrets server-side and adding the CORS headers the browser needs.
-// It answers three lookups:
-//   • GET ?steam64_id=<17-digit id>  → { avatarUrl }   (Steam avatar for that id)
+// The widget is a static GitHub Pages site, so it can't call Steam's Web API
+// directly: the API needs a key (which must stay secret) and sends no CORS
+// headers (so browsers block the request). This Worker sits in between,
+// keeping the key server-side and adding the CORS headers the browser needs.
+// It answers two lookups, both using the Steam Web API:
+//   • GET ?steam64_id=<17-digit id>  → { avatarUrl }   (avatar for that id)
 //   • GET ?vanity=<custom-url-name>  → { steamId }      (resolve a vanity URL,
 //        i.e. the `gabelogannewell` in steamcommunity.com/id/gabelogannewell)
-//   • GET ?twitch=<channel-login>    → { live: bool }   (is that channel live)
+//
+// (Twitch live status lives in a separate Worker — see twitch-live-proxy.js.)
 //
 // Setup (see worker/README.md for details):
 //   1. Deploy this Worker (`wrangler deploy`, or paste it in the CF dashboard).
@@ -17,11 +17,7 @@
 //        wrangler secret put STEAM_API_KEY
 //      (or dashboard → Settings → Variables and Secrets → Add). Get a key at
 //      https://steamcommunity.com/dev/apikey
-//   3. Optional (for Twitch session W/L): register an app at
-//      https://dev.twitch.tv/console/apps and add its credentials as secrets
-//      TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET. Without these the ?twitch=
-//      lookup returns 501 and the widget falls back to rolling-window W/L.
-//   4. Point the widget at the Worker's URL via VITE_AVATAR_PROXY_URL
+//   3. Point the widget at the Worker's URL via VITE_AVATAR_PROXY_URL
 //      (see the repo README).
 
 // Only these site origins may call the Worker from a browser. CORS is what
@@ -58,10 +54,6 @@ export default {
     }
 
     const url = new URL(request.url);
-
-    // Twitch live status: channel login → { live: bool }.
-    const twitch = url.searchParams.get('twitch');
-    if (twitch !== null) return resolveTwitchLive(twitch, env, cors);
 
     // Vanity-URL resolution: steamcommunity.com/id/<name> → Steam64 ID.
     const vanity = url.searchParams.get('vanity');
@@ -134,83 +126,7 @@ async function resolveVanity(vanity, env, cors) {
   }
 }
 
-// Twitch live status: is `login` currently streaming?
-//
-// Twitch's Helix Get Streams needs an *app access token*, which requires the
-// client id AND secret (client-credentials flow) — hence server-side only. The
-// token is cached in the module scope and reused across requests in the same
-// warm isolate until shortly before it expires.
-async function resolveTwitchLive(login, env, cors) {
-  const name = login.trim().toLowerCase();
-  // Twitch logins are letters/digits/underscores (up to 25). Reject anything
-  // else so the Worker can't be used to smuggle arbitrary query params.
-  if (!/^[a-z0-9_]{1,25}$/.test(name)) {
-    return json({ error: 'Invalid Twitch login' }, 400, cors, 'no-store');
-  }
-
-  if (!env.TWITCH_CLIENT_ID || !env.TWITCH_CLIENT_SECRET) {
-    // Not configured — tell the widget so it falls back to rolling-window W/L.
-    return json({ error: 'Twitch is not configured on this Worker' }, 501, cors, 'no-store');
-  }
-
-  let token;
-  try {
-    token = await getTwitchToken(env);
-  } catch {
-    return json({ error: 'Failed to get a Twitch token' }, 502, cors, 'no-store');
-  }
-
-  try {
-    const res = await fetch(
-      `https://api.twitch.tv/helix/streams?user_login=${encodeURIComponent(name)}`,
-      { headers: { 'Client-Id': env.TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` } },
-    );
-    // A 401 usually means the cached token was revoked; drop it so the next
-    // request mints a fresh one.
-    if (res.status === 401) TWITCH_TOKEN = null;
-    if (!res.ok) return json({ error: `Twitch API error: ${res.status}` }, 502, cors, 'no-store');
-    const data = await res.json();
-    // Get Streams only returns entries for channels that are *currently live*;
-    // an offline channel yields an empty `data` array.
-    const stream = Array.isArray(data?.data) ? data.data[0] : null;
-    const live = !!stream && stream.type === 'live';
-    // Live status is time-sensitive, so never cache it (the widget polls often).
-    return json({ live }, 200, cors, 'no-store');
-  } catch {
-    return json({ error: 'Failed to reach the Twitch API' }, 502, cors, 'no-store');
-  }
-}
-
-// App access token cache, shared across requests in a warm isolate. Refreshed
-// when missing or within 60s of expiry.
-let TWITCH_TOKEN = null; // { value: string, expiresAt: number(ms) }
-
-async function getTwitchToken(env) {
-  const now = Date.now();
-  if (TWITCH_TOKEN && TWITCH_TOKEN.expiresAt - 60_000 > now) {
-    return TWITCH_TOKEN.value;
-  }
-  const params = new URLSearchParams({
-    client_id: env.TWITCH_CLIENT_ID,
-    client_secret: env.TWITCH_CLIENT_SECRET,
-    grant_type: 'client_credentials',
-  });
-  const res = await fetch(`https://id.twitch.tv/oauth2/token?${params}`, { method: 'POST' });
-  if (!res.ok) throw new Error(`token ${res.status}`);
-  const data = await res.json();
-  if (!data?.access_token) throw new Error('no access_token');
-  TWITCH_TOKEN = {
-    value: data.access_token,
-    // expires_in is seconds; default to 1h if it's somehow missing.
-    expiresAt: now + (Number(data.expires_in) || 3600) * 1000,
-  };
-  return TWITCH_TOKEN.value;
-}
-
-// `cacheControl` overrides the default (cache 200s for an hour, never cache
-// errors) — used for time-sensitive lookups like live status that must not be
-// cached even on success.
-function json(body, status, cors, cacheControl) {
+function json(body, status, cors) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -220,8 +136,7 @@ function json(body, status, cors, cacheControl) {
       // browser for an hour and keep masking an already-fixed Worker or a
       // transient Steam hiccup — exactly the kind of stale error that makes a
       // redeploy look like it didn't work.
-      'Cache-Control':
-        cacheControl ?? (status === 200 ? 'public, max-age=3600' : 'no-store'),
+      'Cache-Control': status === 200 ? 'public, max-age=3600' : 'no-store',
       ...cors,
     },
   });
