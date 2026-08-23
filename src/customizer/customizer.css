@@ -354,6 +354,29 @@ select.input {
   color: #fff;
 }
 
+/* Export ("Add to your stream") buttons */
+.export-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.export-btn {
+  flex: 1;
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+.export-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.export-btn:disabled:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #999;
+}
+
 /* URL row */
 .url-row {
   display: flex;
