@@ -26,8 +26,7 @@ An OBS browser-source widget that shows your CS2 Premier rating, rank badge, <br
 
 CS2 Stats Overlay renders a compact, transparent stats card you can drop straight
 into OBS as a Browser Source. Data is fetched live from the
-[Leetify API](https://leetify.com), and the layout follows the
-[CS2 Stats Overlay Figma design](https://www.figma.com/design/5JQex6PZfwQGDoB4D3SrAl/CS2-Stats-Overlay).
+[Leetify API](https://leetify.com).
 
 - **Live Premier rating** with a per-tier **rank badge** (Gray, Light Blue, Blue,
   Purple, Pink, Red, Gold) — or a plain rank-coloured number when the badge is off
