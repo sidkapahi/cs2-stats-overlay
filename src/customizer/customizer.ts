@@ -480,7 +480,7 @@ function bindControls() {
   const zipBtn = document.getElementById("export-zip")!;
   zipBtn.addEventListener("click", () => {
     if (!currentConfig.steamId) return;
-    downloadOverlayZip(getWidgetUrl());
+    downloadOverlayZip(currentConfig, getWidgetUrl());
     trackEvent("export_zip_downloaded", { steamId: currentConfig.steamId });
     flashButton(zipBtn, "Downloaded ✓");
   });
@@ -634,7 +634,7 @@ function init() {
               <button class="btn btn-secondary export-btn" id="export-sl" disabled>Streamlabs</button>
               <button class="btn btn-secondary export-btn" id="export-zip" disabled>Download .zip</button>
             </div>
-            <span class="field-hint">StreamElements &amp; Streamlabs copy the widget URL and open the editor — paste it into a Browser Source (or a Custom Widget). The .zip bundles a ready-to-use overlay file with setup notes.</span>
+            <span class="field-hint">StreamElements &amp; Streamlabs copy the widget URL and open the editor — paste it into a Browser Source. The .zip is a StreamElements <strong>Custom Widget</strong> bundle (HTML, CSS, JS, FIELDS, DATA) so you can edit the same options right inside StreamElements.</span>
           </div>
         </div>
       </div>

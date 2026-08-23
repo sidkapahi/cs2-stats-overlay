@@ -88,9 +88,13 @@ shortcuts:
 - **StreamElements** / **Streamlabs** — copies the widget URL to your clipboard
   and opens that editor in a new tab. Paste it into a **Browser Source**, or in
   StreamElements into a **Static / Custom → Custom Widget**.
-- **Download .zip** — grabs a small bundle (`overlay.html`, `widget-url.txt`,
-  `README.txt`) with a ready-to-use overlay page you can drop in as a local-file
-  Browser Source or paste into a StreamElements Custom Widget.
+- **Download .zip** — grabs a **StreamElements Custom Widget** bundle
+  (`widget.html`, `widget.css`, `widget.js`, `fields.json`, `data.json`, plus
+  `widget-url.txt` and a `README.txt`). Paste each file into its matching tab in
+  the Custom Widget editor (HTML / CSS / JS / FIELDS / DATA). The fields come
+  pre-filled with your chosen options and stay editable **inside StreamElements**
+  — Steam ID, toggles, stats, font, background colour and opacity — so you can
+  tweak the overlay there without coming back to the customizer.
 
 > [!NOTE]
 > There's no server behind this site, so it can't push an overlay straight into
