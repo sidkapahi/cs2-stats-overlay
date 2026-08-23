@@ -80,6 +80,24 @@ variables → Actions) so it's injected into the build.
 6. In OBS, add a **Browser Source** and paste the URL
 7. Set the recommended size to **660 × 180** (adjust as needed)
 
+### Add to your stream (StreamElements / Streamlabs / .zip)
+
+Under the widget URL, the customizer has an **Add to your stream** row with a few
+shortcuts:
+
+- **StreamElements** / **Streamlabs** — copies the widget URL to your clipboard
+  and opens that editor in a new tab. Paste it into a **Browser Source**, or in
+  StreamElements into a **Static / Custom → Custom Widget**.
+- **Download .zip** — grabs a small bundle (`overlay.html`, `widget-url.txt`,
+  `README.txt`) with a ready-to-use overlay page you can drop in as a local-file
+  Browser Source or paste into a StreamElements Custom Widget.
+
+> [!NOTE]
+> There's no server behind this site, so it can't push an overlay straight into
+> your StreamElements/Streamlabs account (that needs an account login and a
+> backend). These shortcuts smooth over the manual step — copy the URL, open the
+> editor, paste — rather than fully automating it.
+
 ## Query Parameters
 
 The widget URL supports these parameters:
