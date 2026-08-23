@@ -373,17 +373,9 @@ select.input {
   color: #fff;
 }
 
-/* Export ("Add to your stream") buttons */
-.export-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
+/* Export ("Add to your stream") button */
 .export-btn {
-  flex: 1;
-  min-width: 120px;
-  white-space: nowrap;
+  width: 100%;
 }
 
 .export-btn:disabled {

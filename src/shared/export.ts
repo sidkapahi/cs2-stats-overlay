@@ -8,12 +8,9 @@
 import { createZip } from './zip';
 import { STAT_LABELS, type WidgetConfig } from './types';
 
-// StreamElements has a real web overlay editor we can deep-link to.
+// StreamElements' web overlay editor, linked from the bundle's README.
 export const STREAMELEMENTS_EDITOR_URL =
   'https://streamelements.com/dashboard/overlays';
-// Streamlabs browser sources are added in the Streamlabs Desktop app; the web
-// dashboard is the closest public landing page to send people to.
-export const STREAMLABS_DASHBOARD_URL = 'https://streamlabs.com/dashboard';
 
 // Recommended browser-source size for the widget (kept in sync with the README).
 export const RECOMMENDED_WIDTH = 660;
