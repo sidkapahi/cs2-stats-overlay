@@ -5,11 +5,7 @@ import {
   type PremierData,
 } from "../shared/api";
 import { configToParams, normalizeTwitchLogin } from "../shared/config";
-import {
-  STREAMELEMENTS_EDITOR_URL,
-  STREAMLABS_DASHBOARD_URL,
-  downloadOverlayZip,
-} from "../shared/export";
+import { downloadOverlayZip } from "../shared/export";
 import { GOOGLE_FONTS, fontStack, loadFont } from "../shared/fonts";
 import { renderMessage, renderWidget } from "../shared/render";
 import { parseSteamInput } from "../shared/steamId";
@@ -88,7 +84,7 @@ function renderPreview() {
 }
 
 // Export buttons are only usable once there's a real widget URL to hand off.
-const EXPORT_BUTTON_IDS = ["export-se", "export-sl", "export-zip"];
+const EXPORT_BUTTON_IDS = ["export-zip"];
 
 function updateGeneratedUrl() {
   const urlEl = document.getElementById("generated-url") as HTMLInputElement;
@@ -451,36 +447,10 @@ function bindControls() {
     setTimeout(() => (btn.textContent = original), 1600);
   };
 
-  // Copies the widget URL and opens the given editor in a new tab. A backend-free
-  // static site can't auto-inject an overlay into someone's account, so this puts
-  // the URL on their clipboard and drops them on the editor to paste it.
-  const openEditor = (
-    btn: HTMLElement,
-    editorUrl: string,
-    event: string,
-  ) => {
-    const url = getWidgetUrl();
-    if (!currentConfig.steamId) return;
-    navigator.clipboard.writeText(url).catch(() => {});
-    trackEvent(event, { steamId: currentConfig.steamId });
-    window.open(editorUrl, "_blank", "noopener");
-    flashButton(btn, "URL copied ✓");
-  };
-
-  const seBtn = document.getElementById("export-se")!;
-  seBtn.addEventListener("click", () =>
-    openEditor(seBtn, STREAMELEMENTS_EDITOR_URL, "export_streamelements"),
-  );
-
-  const slBtn = document.getElementById("export-sl")!;
-  slBtn.addEventListener("click", () =>
-    openEditor(slBtn, STREAMLABS_DASHBOARD_URL, "export_streamlabs"),
-  );
-
   const zipBtn = document.getElementById("export-zip")!;
   zipBtn.addEventListener("click", () => {
     if (!currentConfig.steamId) return;
-    downloadOverlayZip(getWidgetUrl());
+    downloadOverlayZip(currentConfig, getWidgetUrl());
     trackEvent("export_zip_downloaded", { steamId: currentConfig.steamId });
     flashButton(zipBtn, "Downloaded ✓");
   });
@@ -629,12 +599,8 @@ function init() {
 
           <div class="field">
             <label class="field-label">Add to your stream</label>
-            <div class="export-row">
-              <button class="btn btn-secondary export-btn" id="export-se" disabled>StreamElements</button>
-              <button class="btn btn-secondary export-btn" id="export-sl" disabled>Streamlabs</button>
-              <button class="btn btn-secondary export-btn" id="export-zip" disabled>Download .zip</button>
-            </div>
-            <span class="field-hint">StreamElements &amp; Streamlabs copy the widget URL and open the editor — paste it into a Browser Source (or a Custom Widget). The .zip bundles a ready-to-use overlay file with setup notes.</span>
+            <button class="btn btn-secondary export-btn" id="export-zip" disabled>Download Zip for StreamElements</button>
+            <span class="field-hint">A StreamElements <strong>Custom Widget</strong> bundle (HTML, CSS, JS, FIELDS, DATA) — paste each file into its tab and edit the same options right inside StreamElements. Prefer OBS/Streamlabs? Use the widget URL above as a Browser Source.</span>
           </div>
         </div>
       </div>

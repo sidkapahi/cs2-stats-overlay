@@ -73,6 +73,15 @@ body {
   .layout {
     grid-template-columns: minmax(0, 480px);
   }
+
+  /* Single column: let both panels flow with the page again instead of each
+     scrolling on its own. */
+  .settings-panel,
+  .preview-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
 }
 
 /* Panels */
@@ -91,6 +100,16 @@ body {
   margin-bottom: 20px;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* On wide (two-column) layouts each column sticks to the top and scrolls on its
+   own, so a long settings list doesn't drag the whole page (and the preview)
+   down with it. */
+.settings-panel {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
 }
 
 .preview-panel {
@@ -354,17 +373,9 @@ select.input {
   color: #fff;
 }
 
-/* Export ("Add to your stream") buttons */
-.export-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
+/* Export ("Add to your stream") button */
 .export-btn {
-  flex: 1;
-  min-width: 120px;
-  white-space: nowrap;
+  width: 100%;
 }
 
 .export-btn:disabled {

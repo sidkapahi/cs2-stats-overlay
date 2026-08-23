@@ -1,92 +1,253 @@
 // Helpers for the "Add to your stream" export options: deep links to the
-// StreamElements / Streamlabs editors and a downloadable, ready-to-use overlay
-// bundle. Everything here is client-side — there's no backend, so we can't push
-// an overlay straight into someone's account (that needs their StreamElements
-// OAuth login and a server). Instead we smooth over the manual step: copy the
-// widget URL, open the right editor, and hand over a zipped overlay file they
-// can drop in as a Browser Source or Custom Widget.
+// StreamElements / Streamlabs editors and a downloadable StreamElements Custom
+// Widget bundle. Everything here is client-side — there's no backend, so we
+// can't push an overlay straight into someone's account (that needs their
+// StreamElements OAuth login and a server). Instead we hand over the exact file
+// set a Custom Widget expects (HTML / CSS / JS / FIELDS / DATA), pre-filled with
+// the chosen config and wired so the fields stay editable inside StreamElements.
 import { createZip } from './zip';
+import { STAT_LABELS, type WidgetConfig } from './types';
 
-// StreamElements has a real web overlay editor we can deep-link to.
+// StreamElements' web overlay editor, linked from the bundle's README.
 export const STREAMELEMENTS_EDITOR_URL =
   'https://streamelements.com/dashboard/overlays';
-// Streamlabs browser sources are added in the Streamlabs Desktop app; the web
-// dashboard is the closest public landing page to send people to.
-export const STREAMLABS_DASHBOARD_URL = 'https://streamlabs.com/dashboard';
 
 // Recommended browser-source size for the widget (kept in sync with the README).
 export const RECOMMENDED_WIDTH = 660;
 export const RECOMMENDED_HEIGHT = 180;
 
-// Escapes a URL for safe use inside a double-quoted HTML attribute. URLSearchParams
-// already percent-encodes values, so the only raw specials left are & < > ".
-function escapeAttr(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+// Strips any query string, leaving the hosted widget's base URL (…/widget/).
+function widgetBase(widgetUrl: string): string {
+  return widgetUrl.split('?')[0];
 }
 
-// A standalone overlay page that embeds the live widget in a correctly-sized,
-// transparent iframe. Works as a local-file Browser Source in OBS/Streamlabs and
-// as the HTML for a StreamElements Custom Widget. It loads the hosted widget, so
-// stats stay live without re-exporting.
-export function buildOverlayHtml(widgetUrl: string): string {
-  const src = escapeAttr(widgetUrl);
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>CS2 Stats Overlay</title>
-  <style>
-    html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
-    iframe {
-      border: 0;
-      display: block;
-      width: ${RECOMMENDED_WIDTH}px;
-      height: ${RECOMMENDED_HEIGHT}px;
-      background: transparent;
-    }
-  </style>
-</head>
-<body>
-  <iframe src="${src}" scrolling="no" allowtransparency="true"></iframe>
-</body>
-</html>
+// ---------------------------------------------------------------------------
+// StreamElements Custom Widget bundle
+//
+// A Custom Widget is HTML + CSS + JS plus a FIELDS definition (the editable
+// inputs shown in the SE side panel) and a DATA blob. Our HTML is a transparent
+// iframe; the JS reads the fields on `onWidgetLoad` and points the iframe at the
+// hosted widget with matching query params — so the streamer can tweak the same
+// options from inside StreamElements and see them applied live.
+// ---------------------------------------------------------------------------
+
+function bundleHtml(): string {
+  return `<div id="cs2-overlay">
+  <iframe id="cs2-overlay-frame" scrolling="no" allowtransparency="true" frameborder="0"></iframe>
+</div>
 `;
 }
 
-export function buildReadme(widgetUrl: string): string {
-  return `CS2 Stats Overlay
-=================
+function bundleCss(): string {
+  return `html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
 
-Your widget URL:
-  ${widgetUrl}
+#cs2-overlay {
+  width: ${RECOMMENDED_WIDTH}px;
+  height: ${RECOMMENDED_HEIGHT}px;
+}
 
-This overlay shows your live CS2 Premier stats from Leetify, so it needs an
-internet connection to load. Recommended browser-source size: ${RECOMMENDED_WIDTH} x ${RECOMMENDED_HEIGHT}.
+#cs2-overlay-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: transparent;
+}
+`;
+}
 
-Files in this zip:
-  overlay.html   - a ready-to-use overlay page (embeds the widget above)
-  widget-url.txt - just the widget URL, for copy/paste
-  README.txt     - this file
+// The JS mirrors src/shared/config.ts::configToParams, but sets every param
+// explicitly (the widget reads explicit values fine) so it stays simple and
+// doesn't need to know the defaults.
+function bundleJs(base: string): string {
+  return `// CS2 Stats Overlay — StreamElements Custom Widget
+// Builds the hosted widget URL from the editable fields and loads it in the iframe.
+(function () {
+  var BASE = ${JSON.stringify(base)};
 
-OBS Studio / Streamlabs Desktop
--------------------------------
-1. In Sources, add a new "Browser Source".
-2. Either paste the widget URL into the URL field, or tick "Local file" and
-   choose overlay.html from this folder.
-3. Set Width ${RECOMMENDED_WIDTH} and Height ${RECOMMENDED_HEIGHT} (adjust to taste).
+  function buildUrl(f) {
+    f = f || {};
+    var p = new URLSearchParams();
+    p.set('steamId', String(f.steamId || '').trim());
+    var twitch = String(f.twitch || '').trim();
+    if (twitch) p.set('twitch', twitch);
+    p.set('avatar', f.showAvatar ? '1' : '0');
+    p.set('name', f.showName ? '1' : '0');
+    p.set('badge', f.showBadge ? '1' : '0');
+    p.set('change', f.showChange ? '1' : '0');
+    p.set('wl', f.showWinLoss ? '1' : '0');
+    if (f.showStats) {
+      var stats = String(f.stats || '').trim();
+      if (stats) p.set('stats', stats);
+    } else {
+      p.set('stats', 'off');
+    }
+    p.set('history', f.showMatchHistory ? '1' : '0');
+    p.set('matchCount', String(f.matchCount || '10'));
+    p.set('refresh', String(f.refreshInterval || '60'));
+    if (f.font) p.set('font', String(f.font));
+    if (f.bgColor) p.set('bg', String(f.bgColor).replace(/^#/, ''));
+    if (f.bgOpacity !== undefined && f.bgOpacity !== null && f.bgOpacity !== '') {
+      p.set('bgo', String(f.bgOpacity));
+    }
+    return BASE + '?' + p.toString();
+  }
 
-StreamElements
---------------
+  function apply(fieldData) {
+    var frame = document.getElementById('cs2-overlay-frame');
+    if (frame) frame.src = buildUrl(fieldData);
+  }
+
+  window.addEventListener('onWidgetLoad', function (obj) {
+    apply(obj.detail.fieldData);
+  });
+})();
+`;
+}
+
+// The FIELDS definition (SE side-panel inputs), pre-filled from the config.
+function bundleFields(config: WidgetConfig): string {
+  const statHint = Object.entries(STAT_LABELS)
+    .map(([key, label]) => `${key} = ${label}`)
+    .join(', ');
+
+  const fields: Record<string, unknown> = {
+    steamId: {
+      type: 'text',
+      label: 'Steam64 ID',
+      value: config.steamId,
+      group: 'Player',
+    },
+    twitch: {
+      type: 'text',
+      label: 'Twitch username (optional — session W/L)',
+      value: config.twitchLogin,
+      group: 'Player',
+    },
+    showAvatar: {
+      type: 'checkbox',
+      label: 'Show avatar',
+      value: config.showAvatar,
+      group: 'Data displayed',
+    },
+    showName: {
+      type: 'checkbox',
+      label: 'Show player name',
+      value: config.showName,
+      group: 'Data displayed',
+    },
+    showChange: {
+      type: 'checkbox',
+      label: 'Show rank change',
+      value: config.showChange,
+      group: 'Data displayed',
+    },
+    showWinLoss: {
+      type: 'checkbox',
+      label: 'Show win/loss',
+      value: config.showWinLoss,
+      group: 'Data displayed',
+    },
+    showStats: {
+      type: 'checkbox',
+      label: 'Show stats',
+      value: config.showStats,
+      group: 'Data displayed',
+    },
+    stats: {
+      type: 'text',
+      label: `Stats to show — up to 3, comma-separated (${statHint})`,
+      value: config.stats.join(','),
+      group: 'Data displayed',
+    },
+    showMatchHistory: {
+      type: 'checkbox',
+      label: 'Show match history',
+      value: config.showMatchHistory,
+      group: 'Data displayed',
+    },
+    showBadge: {
+      type: 'checkbox',
+      label: 'Show in-game rank badge instead',
+      value: config.showBadge,
+      group: 'Design',
+    },
+    font: {
+      type: 'googleFont',
+      label: 'Font',
+      value: config.font,
+      group: 'Design',
+    },
+    bgColor: {
+      type: 'colorpicker',
+      label: 'Background color',
+      value: config.bgColor,
+      group: 'Design',
+    },
+    bgOpacity: {
+      type: 'slider',
+      label: 'Background opacity',
+      value: config.bgOpacity,
+      min: 0,
+      max: 100,
+      step: 1,
+      group: 'Design',
+    },
+    matchCount: {
+      type: 'dropdown',
+      label: 'Recent matches for data',
+      value: String(config.matchCount),
+      options: { '5': '5', '10': '10' },
+      group: 'Data',
+    },
+    refreshInterval: {
+      type: 'dropdown',
+      label: 'Refresh interval',
+      value: String(config.refreshInterval),
+      options: {
+        '30': '30 seconds',
+        '60': '1 minute',
+        '180': '3 minutes',
+        '300': '5 minutes',
+      },
+      group: 'Data',
+    },
+  };
+
+  return JSON.stringify(fields, null, 2) + '\n';
+}
+
+function bundleReadme(widgetUrl: string): string {
+  return `CS2 Stats Overlay — StreamElements Custom Widget
+================================================
+
+This bundle is the file set a StreamElements Custom Widget expects. It loads the
+hosted widget in an iframe and exposes the same options as editable fields inside
+StreamElements, so you can tweak them there without coming back here.
+
+Import into StreamElements
+--------------------------
 1. Open your overlay editor: ${STREAMELEMENTS_EDITOR_URL}
 2. Add Widget -> Static / Custom -> Custom Widget -> Open Editor.
-3. Paste the contents of overlay.html into the HTML tab and save.
-4. Size the widget to ${RECOMMENDED_WIDTH} x ${RECOMMENDED_HEIGHT}.
-   (Alternatively, copy the overlay URL StreamElements gives you and add it as a
-   Browser Source in OBS/Streamlabs.)
+3. Copy each file into its matching tab:
+     widget.html  -> HTML tab
+     widget.css   -> CSS tab
+     widget.js    -> JS tab
+     fields.json  -> FIELDS tab
+     data.json    -> DATA tab
+4. Save. Use the field inputs on the left to edit the Steam ID, toggles,
+   colors, font, etc. Size the widget to ${RECOMMENDED_WIDTH} x ${RECOMMENDED_HEIGHT}.
+
+Prefer a plain Browser Source? (OBS / Streamlabs / StreamElements)
+------------------------------------------------------------------
+Use this URL directly instead of the bundle:
+  ${widgetUrl}
+Recommended size: ${RECOMMENDED_WIDTH} x ${RECOMMENDED_HEIGHT}. See widget-url.txt.
 `;
 }
 
@@ -102,12 +263,21 @@ function triggerDownload(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-// Bundles the overlay page, the raw URL, and a README into a .zip and downloads it.
-export function downloadOverlayZip(widgetUrl: string): void {
+// Bundles the StreamElements Custom Widget files (plus the raw URL and a README)
+// into a .zip and downloads it.
+export function downloadOverlayZip(
+  config: WidgetConfig,
+  widgetUrl: string,
+): void {
+  const base = widgetBase(widgetUrl);
   const blob = createZip([
-    { name: 'overlay.html', data: buildOverlayHtml(widgetUrl) },
+    { name: 'widget.html', data: bundleHtml() },
+    { name: 'widget.css', data: bundleCss() },
+    { name: 'widget.js', data: bundleJs(base) },
+    { name: 'fields.json', data: bundleFields(config) },
+    { name: 'data.json', data: '{}\n' },
     { name: 'widget-url.txt', data: `${widgetUrl}\n` },
-    { name: 'README.txt', data: buildReadme(widgetUrl) },
+    { name: 'README.txt', data: bundleReadme(widgetUrl) },
   ]);
-  triggerDownload(blob, 'cs2-stats-overlay.zip');
+  triggerDownload(blob, 'cs2-stats-overlay-streamelements.zip');
 }

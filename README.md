@@ -80,23 +80,25 @@ variables → Actions) so it's injected into the build.
 6. In OBS, add a **Browser Source** and paste the URL
 7. Set the recommended size to **660 × 180** (adjust as needed)
 
-### Add to your stream (StreamElements / Streamlabs / .zip)
+### Add to your stream (StreamElements Custom Widget)
 
-Under the widget URL, the customizer has an **Add to your stream** row with a few
-shortcuts:
+Under the widget URL, the customizer has a **Download Zip for StreamElements**
+button. It grabs a **StreamElements Custom Widget** bundle (`widget.html`,
+`widget.css`, `widget.js`, `fields.json`, `data.json`, plus `widget-url.txt` and
+a `README.txt`). Paste each file into its matching tab in the Custom Widget
+editor (HTML / CSS / JS / FIELDS / DATA). The fields come pre-filled with your
+chosen options and stay editable **inside StreamElements** — Steam ID, toggles,
+stats, font, background colour and opacity — so you can tweak the overlay there
+without coming back to the customizer.
 
-- **StreamElements** / **Streamlabs** — copies the widget URL to your clipboard
-  and opens that editor in a new tab. Paste it into a **Browser Source**, or in
-  StreamElements into a **Static / Custom → Custom Widget**.
-- **Download .zip** — grabs a small bundle (`overlay.html`, `widget-url.txt`,
-  `README.txt`) with a ready-to-use overlay page you can drop in as a local-file
-  Browser Source or paste into a StreamElements Custom Widget.
+Prefer OBS or Streamlabs? Just copy the **widget URL** above and add it as a
+**Browser Source** (recommended size 660 × 180).
 
 > [!NOTE]
 > There's no server behind this site, so it can't push an overlay straight into
-> your StreamElements/Streamlabs account (that needs an account login and a
-> backend). These shortcuts smooth over the manual step — copy the URL, open the
-> editor, paste — rather than fully automating it.
+> your StreamElements account (that needs an account login and a backend). The
+> bundle is the file set you paste into the Custom Widget editor, pre-filled to
+> save you the manual setup.
 
 ## Query Parameters
 
