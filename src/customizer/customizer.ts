@@ -5,13 +5,20 @@ import {
   type PremierData,
 } from "../shared/api";
 import { configToParams } from "../shared/config";
+import { GOOGLE_FONTS, fontStack, loadFont } from "../shared/fonts";
 import { renderMessage, renderWidget } from "../shared/render";
 import { parseSteamInput } from "../shared/steamId";
-import { DEFAULT_CONFIG, type WidgetConfig } from "../shared/types";
+import {
+  DEFAULT_CONFIG,
+  STAT_KEYS,
+  STAT_LABELS,
+  STAT_MAX,
+  type WidgetConfig,
+} from "../shared/types";
 import "../widget/widget.css";
 import "./customizer.css";
 
-let currentConfig: WidgetConfig = { ...DEFAULT_CONFIG };
+let currentConfig: WidgetConfig = { ...DEFAULT_CONFIG, stats: [...DEFAULT_CONFIG.stats] };
 let previewData: PremierData | null = null;
 let previewError: string | null = null;
 let previewLoading = false;
@@ -28,25 +35,51 @@ function getWidgetUrl(): string {
   return `${base}/widget/?${params.toString()}`;
 }
 
+// Never render the widget larger than this in the preview (keeps the original
+// look for light configs); fitPreview only ever scales further *down* to fit.
+const MAX_PREVIEW_SCALE = 0.72;
+
+// Scales the rendered widget so it always fits inside the fixed preview panel,
+// however long the name or however much content is enabled — the panel size
+// stays put and the widget shrinks to stay within it.
+function fitPreview() {
+  const area = document.getElementById("preview-widget")!;
+  const widget = area.querySelector<HTMLElement>(".widget");
+  if (!widget) return;
+
+  widget.style.transform = "scale(1)";
+  const style = getComputedStyle(area);
+  const availW =
+    area.clientWidth -
+    parseFloat(style.paddingLeft) -
+    parseFloat(style.paddingRight);
+  const availH =
+    area.clientHeight -
+    parseFloat(style.paddingTop) -
+    parseFloat(style.paddingBottom);
+
+  const natW = widget.offsetWidth;
+  const natH = widget.offsetHeight;
+  if (natW === 0 || natH === 0) return;
+
+  const scale = Math.min(MAX_PREVIEW_SCALE, availW / natW, availH / natH);
+  widget.style.transform = `scale(${scale})`;
+}
+
 function renderPreview() {
   const previewEl = document.getElementById("preview-widget")!;
 
   if (previewError) {
     previewEl.innerHTML = renderMessage("Error", previewError);
-    return;
-  }
-
-  if (previewLoading) {
+  } else if (previewLoading) {
     previewEl.innerHTML = renderMessage("Loading", "…");
-    return;
-  }
-
-  if (!previewData) {
+  } else if (!previewData) {
     previewEl.innerHTML = renderMessage("Enter a Steam ID or profile link", "—");
-    return;
+  } else {
+    previewEl.innerHTML = renderWidget(currentConfig, previewData);
   }
 
-  previewEl.innerHTML = renderWidget(currentConfig, previewData);
+  fitPreview();
 }
 
 function updateGeneratedUrl() {
@@ -146,16 +179,185 @@ function debouncedLoadPreview(rawInput: string) {
   debounceTimer = setTimeout(() => resolveAndLoad(rawInput), 600);
 }
 
-// Display-option checkboxes → config keys, in the order they appear in the UI.
+// Simple display toggles → config keys. Stats are handled separately because
+// they gate a nested picker (see bindStats).
 const checkboxMap: Record<string, keyof WidgetConfig> = {
   "show-avatar": "showAvatar",
   "show-name": "showName",
-  "show-badge": "showBadge",
   "show-change": "showChange",
   "show-wl": "showWinLoss",
-  "show-stats": "showStats",
   "show-history": "showMatchHistory",
+  "show-badge": "showBadge",
 };
+
+// ---- Stats picker --------------------------------------------------------
+// "Show stats" gates a nested set of stat checkboxes (K/D, AVG, AIM, WIN %),
+// capped at STAT_MAX selections. config.stats is kept in STAT_KEYS order.
+function syncStatsUi() {
+  const on = currentConfig.showStats;
+  const group = document.getElementById("stats-group")!;
+  group.classList.toggle("disabled", !on);
+
+  const atMax = currentConfig.stats.length >= STAT_MAX;
+  for (const key of STAT_KEYS) {
+    const el = document.getElementById(`stat-${key}`) as HTMLInputElement;
+    const checked = currentConfig.stats.includes(key);
+    el.checked = checked;
+    // Disable when the block is off, or when the cap is hit and this one isn't
+    // already selected (so you must deselect before picking another).
+    el.disabled = !on || (atMax && !checked);
+  }
+}
+
+function bindStats() {
+  const showStats = document.getElementById("show-stats") as HTMLInputElement;
+  showStats.checked = currentConfig.showStats;
+  showStats.addEventListener("change", () => {
+    currentConfig.showStats = showStats.checked;
+    syncStatsUi();
+    renderPreview();
+    updateGeneratedUrl();
+  });
+
+  for (const key of STAT_KEYS) {
+    const el = document.getElementById(`stat-${key}`) as HTMLInputElement;
+    el.addEventListener("change", () => {
+      if (el.checked) {
+        if (currentConfig.stats.length >= STAT_MAX) {
+          el.checked = false; // guard against races; cap is enforced
+          return;
+        }
+        // Insert keeping STAT_KEYS order.
+        currentConfig.stats = STAT_KEYS.filter(
+          (k) => currentConfig.stats.includes(k) || k === key,
+        );
+      } else {
+        currentConfig.stats = currentConfig.stats.filter((k) => k !== key);
+      }
+      syncStatsUi();
+      renderPreview();
+      updateGeneratedUrl();
+    });
+  }
+}
+
+// ---- Font combobox -------------------------------------------------------
+function renderFontList(filter: string) {
+  const list = document.getElementById("font-list")!;
+  const q = filter.trim().toLowerCase();
+  const matches = GOOGLE_FONTS.filter((f) => f.toLowerCase().includes(q));
+  list.innerHTML = matches
+    .map(
+      (f) =>
+        `<div class="combo-item${
+          f === currentConfig.font ? " selected" : ""
+        }" data-font="${f}" style="font-family:${fontStack(f)}">${f}</div>`,
+    )
+    .join("");
+  // Preload the fonts shown so the list previews in their own typeface.
+  for (const f of matches.slice(0, 40)) loadFont(f);
+}
+
+function bindFont() {
+  const search = document.getElementById("font-search") as HTMLInputElement;
+  const list = document.getElementById("font-list")!;
+
+  const open = () => {
+    renderFontList("");
+    list.hidden = false;
+  };
+  const close = () => {
+    list.hidden = true;
+    search.value = currentConfig.font;
+    search.style.fontFamily = fontStack(currentConfig.font);
+  };
+
+  search.addEventListener("focus", () => {
+    search.value = "";
+    open();
+  });
+  search.addEventListener("input", () => renderFontList(search.value));
+  search.addEventListener("blur", () => {
+    // Delay so a click on an item registers before the list hides.
+    setTimeout(close, 150);
+  });
+
+  list.addEventListener("mousedown", (e) => {
+    const item = (e.target as HTMLElement).closest(".combo-item");
+    if (!item) return;
+    e.preventDefault();
+    const font = (item as HTMLElement).dataset.font!;
+    currentConfig.font = font;
+    loadFont(font);
+    close();
+    renderPreview();
+    updateGeneratedUrl();
+  });
+}
+
+// ---- Background color + opacity -----------------------------------------
+function bindBackground() {
+  const color = document.getElementById("bg-color") as HTMLInputElement;
+  const hex = document.getElementById("bg-hex") as HTMLInputElement;
+  const opacity = document.getElementById("bg-opacity") as HTMLInputElement;
+  const opacityVal = document.getElementById("bg-opacity-val")!;
+
+  const applyColor = (value: string) => {
+    currentConfig.bgColor = value;
+    color.value = value;
+    hex.value = value;
+    renderPreview();
+    updateGeneratedUrl();
+  };
+
+  color.addEventListener("input", () => applyColor(color.value));
+
+  hex.addEventListener("input", () => {
+    const v = hex.value.trim();
+    if (/^#?[0-9a-fA-F]{6}$/.test(v)) {
+      applyColor(v.startsWith("#") ? v.toLowerCase() : `#${v.toLowerCase()}`);
+    }
+  });
+
+  opacity.addEventListener("input", () => {
+    currentConfig.bgOpacity = parseInt(opacity.value, 10);
+    opacityVal.textContent = `${currentConfig.bgOpacity}%`;
+    renderPreview();
+    updateGeneratedUrl();
+  });
+}
+
+// Pushes currentConfig into every control (used on init and Restore defaults).
+function syncControlsFromConfig() {
+  for (const [id, key] of Object.entries(checkboxMap)) {
+    (document.getElementById(id) as HTMLInputElement).checked = currentConfig[
+      key
+    ] as boolean;
+  }
+  (document.getElementById("show-stats") as HTMLInputElement).checked =
+    currentConfig.showStats;
+  syncStatsUi();
+
+  (document.getElementById("match-count") as HTMLSelectElement).value = String(
+    currentConfig.matchCount,
+  );
+  (document.getElementById("refresh-interval") as HTMLSelectElement).value =
+    String(currentConfig.refreshInterval);
+
+  const search = document.getElementById("font-search") as HTMLInputElement;
+  search.value = currentConfig.font;
+  search.style.fontFamily = fontStack(currentConfig.font);
+  loadFont(currentConfig.font);
+
+  (document.getElementById("bg-color") as HTMLInputElement).value =
+    currentConfig.bgColor;
+  (document.getElementById("bg-hex") as HTMLInputElement).value =
+    currentConfig.bgColor;
+  const opacity = document.getElementById("bg-opacity") as HTMLInputElement;
+  opacity.value = String(currentConfig.bgOpacity);
+  document.getElementById("bg-opacity-val")!.textContent =
+    `${currentConfig.bgOpacity}%`;
+}
 
 function bindControls() {
   const steamInput = document.getElementById("steam-id") as HTMLInputElement;
@@ -176,6 +378,10 @@ function bindControls() {
       updateGeneratedUrl();
     });
   }
+
+  bindStats();
+  bindFont();
+  bindBackground();
 
   const matchCountEl = document.getElementById(
     "match-count",
@@ -215,18 +421,22 @@ function bindControls() {
 
   document.getElementById("reset-btn")!.addEventListener("click", () => {
     const steamId = currentConfig.steamId;
-    currentConfig = { ...DEFAULT_CONFIG, steamId };
-
-    for (const [id, key] of Object.entries(checkboxMap)) {
-      (document.getElementById(id) as HTMLInputElement).checked = currentConfig[
-        key
-      ] as boolean;
-    }
-    matchCountEl.value = String(currentConfig.matchCount);
-    refreshEl.value = String(currentConfig.refreshInterval);
+    currentConfig = {
+      ...DEFAULT_CONFIG,
+      stats: [...DEFAULT_CONFIG.stats],
+      steamId,
+    };
+    syncControlsFromConfig();
     renderPreview();
     updateGeneratedUrl();
   });
+}
+
+function statRowsHtml(): string {
+  return STAT_KEYS.map(
+    (key) =>
+      `<label class="checkbox-row stat-option"><input type="checkbox" id="stat-${key}"><span>${STAT_LABELS[key]}</span></label>`,
+  ).join("");
 }
 
 function init() {
@@ -234,8 +444,11 @@ function init() {
   app.innerHTML = `
     <div class="customizer">
       <header class="header">
-        <h1 class="title">CS2 Stats Overlay</h1>
-        <p class="subtitle">OBS browser source widget for your CS2 Premier stats</p>
+        <div class="header-left">
+          <h1 class="title">CS2 Stats Overlay</h1>
+          <p class="subtitle">OBS browser source widget for your CS2 Premier stats</p>
+        </div>
+        <a class="header-link" href="https://leetify.com" target="_blank" rel="noopener">Powered by Leetify</a>
       </header>
 
       <div class="layout">
@@ -243,31 +456,61 @@ function init() {
           <h2 class="panel-title">Settings</h2>
 
           <div class="field">
-            <label class="field-label" for="steam-id">Steam ID, profile link, or vanity name</label>
+            <label class="field-label" for="steam-id">Steam ID</label>
             <input type="text" id="steam-id" class="input" placeholder="Steam64 ID, profile link, or vanity name (e.g. kapahiii)">
-            <span class="field-hint">Paste your profile URL, a Steam64 ID, or just your custom URL name — we'll figure out the rest</span>
-          </div>
-
-          <div class="section">
-            <h3 class="section-title">Display Options</h3>
-            <label class="checkbox-row"><input type="checkbox" id="show-avatar" checked><span>Show avatar</span></label>
-            <label class="checkbox-row"><input type="checkbox" id="show-name" checked><span>Show player name</span></label>
-            <label class="checkbox-row"><input type="checkbox" id="show-badge" checked><span>Show rank badge</span></label>
-            <label class="checkbox-row"><input type="checkbox" id="show-change" checked><span>Show rank change (+/-)</span></label>
-            <label class="checkbox-row"><input type="checkbox" id="show-wl" checked><span>Show win/loss (W L)</span></label>
-            <label class="checkbox-row"><input type="checkbox" id="show-stats" checked><span>Show stats (K/D, AVG, AIM)</span></label>
-            <label class="checkbox-row"><input type="checkbox" id="show-history" checked><span>Show match history (W L T ...)</span></label>
+            <span class="field-hint">Paste your profile URL, a Steam64 ID, or just your custom URL name.</span>
           </div>
 
           <div class="field">
-            <label class="field-label" for="match-count">Recent matches to use</label>
+            <label class="field-label" for="match-count">Recent matches for data</label>
             <select id="match-count" class="input">
-              <option value="3">3</option>
               <option value="5">5</option>
-              <option value="8">8</option>
               <option value="10" selected>10</option>
             </select>
-            <span class="field-hint">Used for K/D and the match-history strip</span>
+            <span class="field-hint">How many games we'll use to compute the stats (not including win/loss).</span>
+          </div>
+
+          <div class="section">
+            <h3 class="section-title">Data displayed</h3>
+            <label class="checkbox-row"><input type="checkbox" id="show-avatar" checked><span>Show avatar</span></label>
+            <label class="checkbox-row"><input type="checkbox" id="show-name" checked><span>Show player name</span></label>
+            <label class="checkbox-row"><input type="checkbox" id="show-change" checked><span>Show rank change</span></label>
+            <label class="checkbox-row"><input type="checkbox" id="show-wl" checked><span>Show win/loss</span></label>
+
+            <label class="checkbox-row"><input type="checkbox" id="show-stats" checked><span>Show stats</span></label>
+            <div class="sub-options" id="stats-group">
+              <span class="sub-hint">Pick up to ${STAT_MAX}</span>
+              ${statRowsHtml()}
+            </div>
+
+            <label class="checkbox-row"><input type="checkbox" id="show-history"><span>Show match history</span></label>
+          </div>
+
+          <div class="section">
+            <h3 class="section-title">Design</h3>
+            <label class="checkbox-row"><input type="checkbox" id="show-badge"><span>Show in-game badge instead</span></label>
+
+            <div class="field" style="margin-top: 12px;">
+              <label class="field-label" for="font-search">Font</label>
+              <div class="combo">
+                <input type="text" id="font-search" class="input" placeholder="Search Google Fonts…" autocomplete="off" spellcheck="false">
+                <div class="combo-list" id="font-list" hidden></div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Background</label>
+              <div class="bg-row">
+                <input type="color" id="bg-color" class="color-swatch" value="#242424" aria-label="Background color">
+                <input type="text" id="bg-hex" class="input bg-hex" value="#242424" spellcheck="false" aria-label="Background hex">
+              </div>
+              <span class="field-hint">Click the swatch to pick a color.</span>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="bg-opacity">Opacity <span id="bg-opacity-val">100%</span></label>
+              <input type="range" id="bg-opacity" class="range" min="0" max="100" value="100">
+            </div>
           </div>
 
           <div class="field">
@@ -312,12 +555,17 @@ function init() {
       </div>
 
       <footer class="footer">
-        <p>CS2 Stats Overlay · Data from <a href="https://leetify.com" target="_blank">Leetify</a></p>
+        <span>CS2 Stats Overlay</span>
+        <span>Data from <a href="https://leetify.com" target="_blank" rel="noopener">Leetify</a></span>
       </footer>
     </div>
   `;
 
   bindControls();
+  syncControlsFromConfig();
+
+  // Re-fit the preview when the responsive layout changes the panel width.
+  window.addEventListener("resize", fitPreview);
 
   const params = new URLSearchParams(window.location.search);
   const idFromUrl = params.get("id");

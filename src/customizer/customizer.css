@@ -13,16 +13,24 @@ body {
   min-height: 100vh;
 }
 
+/* Full-height shell: header pinned top, footer pinned bottom, columns between. */
 .customizer {
-  max-width: 1100px;
+  min-height: 100vh;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 40px 24px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 
-/* Header */
+/* Header — spread across the top */
 .header {
-  text-align: center;
-  margin-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .title {
@@ -38,17 +46,32 @@ body {
   margin-top: 6px;
 }
 
-/* Layout */
+.header-link {
+  color: #999;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  padding-top: 8px;
+}
+
+.header-link:hover {
+  color: #fff;
+}
+
+/* Layout — two fixed-width but responsive columns, centered in the middle */
 .layout {
+  flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 440px) minmax(0, 440px);
+  justify-content: center;
   gap: 24px;
   align-items: start;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 920px) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 480px);
   }
 }
 
@@ -58,6 +81,7 @@ body {
   border-radius: 16px;
   padding: 24px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 0;
 }
 
 .panel-title {
@@ -151,6 +175,145 @@ select.input {
   background: #111;
   cursor: pointer;
   accent-color: #fff;
+  flex-shrink: 0;
+}
+
+/* Nested stat picker under "Show stats" */
+.sub-options {
+  margin: 2px 0 6px 30px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  transition: opacity 0.15s;
+}
+
+.sub-options.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.sub-hint {
+  display: block;
+  font-size: 11px;
+  color: #555;
+  margin: 4px 0;
+}
+
+.stat-option {
+  padding: 5px 0;
+  font-size: 13px;
+}
+
+.checkbox-row input[type='checkbox']:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Font combobox */
+.combo {
+  position: relative;
+}
+
+.combo-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #161616;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.combo-item {
+  padding: 9px 14px;
+  font-size: 14px;
+  color: #ddd;
+  cursor: pointer;
+}
+
+.combo-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.combo-item.selected {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Background color swatch + hex */
+.bg-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.color-swatch {
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.color-swatch::-webkit-color-swatch-wrapper {
+  padding: 4px;
+}
+
+.color-swatch::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.color-swatch::-moz-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.bg-hex {
+  flex: 1;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  text-transform: lowercase;
+}
+
+/* Opacity slider */
+.range {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.14);
+  outline: none;
+  cursor: pointer;
+}
+
+.range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+
+.range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+
+#bg-opacity-val {
+  color: #fff;
+  font-weight: 700;
 }
 
 /* Buttons */
@@ -193,11 +356,12 @@ select.input {
 
 .url-input {
   flex: 1;
+  min-width: 0;
   font-size: 12px;
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
 
-/* Preview area — hosts the real widget markup (shared render + widget.css) */
+/* Preview area — fixed size; the widget scales/clips to fit, never grows it. */
 .preview-area {
   background: url('https://leetify.com/assets/images/maps/de_anubis.jpg') center / cover no-repeat;
   border-radius: 12px;
@@ -205,19 +369,31 @@ select.input {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 160px;
+  width: 100%;
+  min-height: 200px;
   overflow: hidden;
 }
 
-/* Scale the widget down so the full-size design fits the preview panel. */
+/* The widget is scaled to fit by fitPreview() in customizer.ts (transform scale
+   set inline), so more content or a longer name shrinks the widget rather than
+   growing the preview column or spilling out of it. */
 .preview-area .widget {
-  zoom: 0.72;
+  transform-origin: center center;
+  will-change: transform;
 }
 
-/* Footer */
+/* Cap very long player names so one giant name can't shrink everything else. */
+.preview-area .name {
+  max-width: 260px;
+}
+
+/* Footer — spread across the bottom */
 .footer {
-  text-align: center;
-  margin-top: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   color: #555;
   font-size: 13px;
 }

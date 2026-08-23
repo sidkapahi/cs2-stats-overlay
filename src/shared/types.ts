@@ -88,6 +88,20 @@ export interface RankTier {
   badgeAccent: string;
 }
 
+// The individual stats the widget can show. `showStats` gates the whole block;
+// `stats` picks which of these appear (in this order), capped at STAT_MAX.
+export type StatKey = 'kd' | 'avg' | 'aim' | 'winpct';
+
+export const STAT_KEYS: StatKey[] = ['kd', 'avg', 'aim', 'winpct'];
+export const STAT_LABELS: Record<StatKey, string> = {
+  kd: 'K/D',
+  avg: 'AVG',
+  aim: 'AIM',
+  winpct: 'WIN %',
+};
+// The widget only has room for three stat columns, so the picker is capped here.
+export const STAT_MAX = 3;
+
 export interface WidgetConfig {
   steamId: string;
   showAvatar: boolean;
@@ -96,20 +110,30 @@ export interface WidgetConfig {
   showChange: boolean;
   showWinLoss: boolean;
   showStats: boolean;
+  // Which stats to show when showStats is on, in display order (max STAT_MAX).
+  stats: StatKey[];
   showMatchHistory: boolean;
   matchCount: number;
   refreshInterval: number;
+  // Design options.
+  font: string;
+  bgColor: string; // hex, e.g. '#242424'
+  bgOpacity: number; // 0..100
 }
 
 export const DEFAULT_CONFIG: WidgetConfig = {
   steamId: '',
   showAvatar: true,
   showName: true,
-  showBadge: true,
+  showBadge: false,
   showChange: true,
   showWinLoss: true,
   showStats: true,
-  showMatchHistory: true,
+  stats: ['kd', 'avg', 'aim'],
+  showMatchHistory: false,
   matchCount: 10,
   refreshInterval: 60,
+  font: 'Inter',
+  bgColor: '#242424',
+  bgOpacity: 100,
 };
