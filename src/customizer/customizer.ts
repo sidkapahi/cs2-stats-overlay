@@ -534,10 +534,12 @@ function init() {
           <div class="field">
             <label class="field-label" for="refresh-interval">Refresh interval</label>
             <select id="refresh-interval" class="input">
+              <option value="30">30 seconds</option>
               <option value="60" selected>1 minute</option>
               <option value="180">3 minutes</option>
               <option value="300">5 minutes</option>
             </select>
+            <span class="field-hint">Leetify takes a few minutes to sync a finished match, so faster than ~30s rarely shows results sooner — it mainly uses more of your API rate limit.</span>
           </div>
 
           <button class="btn btn-secondary" id="reset-btn">Restore defaults</button>
