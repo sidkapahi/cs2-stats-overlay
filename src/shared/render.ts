@@ -1,8 +1,9 @@
 import type { PremierData } from './api';
 import { brandLogoSrc } from './brandLogo';
 import { defaultAvatarSrc } from './defaultAvatar';
+import { fontStack } from './fonts';
 import { formatRating, getRankTier } from './ranks';
-import type { RankTier, WidgetConfig } from './types';
+import { STAT_LABELS, type RankTier, type StatKey, type WidgetConfig } from './types';
 
 // Escapes user-controlled text (the player name) before it goes into innerHTML.
 function esc(s: string): string {
@@ -24,6 +25,18 @@ export function badgeSvg(tier: RankTier): string {
     <polygon points="26,0 35,0 15,74 6,74" fill="${tier.badgeAccent}"/>
     <polygon points="44,0 53,0 33,74 24,74" fill="${tier.badgeAccent}"/>
   </svg>`;
+}
+
+// Converts a #rrggbb hex + a 0..100 opacity into an rgba() string for the
+// widget's configurable background. Falls back to the default tone on a bad hex.
+function bgRgba(hex: string, opacity: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  const value = m ? m[1] : '242424';
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  const a = Math.max(0, Math.min(100, opacity)) / 100;
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
 
 // The kapKit brand logo shown in the match-history footer — the uploaded
@@ -74,21 +87,26 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
     </div>`;
   }
 
-  // Stats block: K/D, average kills, and aim rating over the tracked matches
-  // (order + metrics per the Figma design, node 1-470).
+  // Stats block: the user-picked subset of K/D, average kills, aim rating, and
+  // win rate over the tracked matches (order follows config.stats).
   let statsHtml = '';
-  if (config.showStats) {
+  if (config.showStats && config.stats.length > 0) {
     const withKd = recent.filter((g) => g.kills != null && g.deaths != null);
     const totalKills = withKd.reduce((s, g) => s + g.kills!, 0);
     const totalDeaths = withKd.reduce((s, g) => s + g.deaths!, 0);
-    const kd = totalDeaths > 0 ? (totalKills / totalDeaths).toFixed(2) : '—';
-    const avgKills = withKd.length > 0 ? (totalKills / withKd.length).toFixed(1) : '—';
-    statsHtml = `
-      <div class="stats">
-        <div class="stat"><span class="stat-val">${kd}</span><span class="stat-lbl">K/D</span></div>
-        <div class="stat"><span class="stat-val">${avgKills}</span><span class="stat-lbl">AVG</span></div>
-        <div class="stat"><span class="stat-val">${data.aimRating.toFixed(1)}</span><span class="stat-lbl">AIM</span></div>
-      </div>`;
+    const statValues: Record<StatKey, string> = {
+      kd: totalDeaths > 0 ? (totalKills / totalDeaths).toFixed(2) : '—',
+      avg: withKd.length > 0 ? (totalKills / withKd.length).toFixed(1) : '—',
+      aim: data.aimRating.toFixed(1),
+      winpct: `${Math.round((data.winRate ?? 0) * 100)}%`,
+    };
+    const cells = config.stats
+      .map(
+        (k) =>
+          `<div class="stat"><span class="stat-val">${statValues[k]}</span><span class="stat-lbl">${STAT_LABELS[k]}</span></div>`,
+      )
+      .join('');
+    statsHtml = `<div class="stats">${cells}</div>`;
   }
 
   // Match-history strip: W/L/T letters (oldest → newest) plus the wordmark.
@@ -115,8 +133,11 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
     config.showAvatar ? 'has-avatar' : 'no-avatar',
   ].join(' ');
 
+  // Design overrides: configurable background tint/opacity and font family.
+  const rootStyle = `background: ${bgRgba(config.bgColor, config.bgOpacity)}; font-family: ${fontStack(config.font)};`;
+
   return `
-    <div class="widget ${modifiers}">
+    <div class="widget ${modifiers}" style="${rootStyle}">
       <div class="widget-main">
         <div class="identity">
           ${avatarHtml}

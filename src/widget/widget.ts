@@ -1,6 +1,7 @@
 import { trackEvent } from '../shared/analytics';
 import { fetchPremierData } from '../shared/api';
 import { paramsToConfig } from '../shared/config';
+import { loadFont } from '../shared/fonts';
 import { renderMessage, renderWidget } from '../shared/render';
 import './widget.css';
 
@@ -8,6 +9,9 @@ async function init() {
   const container = document.getElementById('app')!;
   const params = new URLSearchParams(window.location.search);
   const config = paramsToConfig(params);
+
+  // Pull in the chosen Google Font (Inter is already bundled).
+  loadFont(config.font);
 
   if (!config.steamId) {
     container.innerHTML = renderMessage('Error', 'No Steam ID provided.');
