@@ -104,6 +104,11 @@ export const STAT_MAX = 3;
 
 export interface WidgetConfig {
   steamId: string;
+  // Twitch login (channel name, not the display name). When set, the W/L pills
+  // become session-scoped: they reset when the channel goes live and freeze
+  // (keeping the last session's record) when it goes offline. Empty = the old
+  // rolling-window W/L over recent matches.
+  twitchLogin: string;
   showAvatar: boolean;
   showName: boolean;
   showBadge: boolean;
@@ -123,6 +128,7 @@ export interface WidgetConfig {
 
 export const DEFAULT_CONFIG: WidgetConfig = {
   steamId: '',
+  twitchLogin: '',
   showAvatar: true,
   showName: true,
   showBadge: false,

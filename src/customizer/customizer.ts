@@ -4,7 +4,7 @@ import {
   resolveVanityUrl,
   type PremierData,
 } from "../shared/api";
-import { configToParams } from "../shared/config";
+import { configToParams, normalizeTwitchLogin } from "../shared/config";
 import { GOOGLE_FONTS, fontStack, loadFont } from "../shared/fonts";
 import { renderMessage, renderWidget } from "../shared/render";
 import { parseSteamInput } from "../shared/steamId";
@@ -334,6 +334,9 @@ function syncControlsFromConfig() {
       key
     ] as boolean;
   }
+  (document.getElementById("twitch-login") as HTMLInputElement).value =
+    currentConfig.twitchLogin;
+
   (document.getElementById("show-stats") as HTMLInputElement).checked =
     currentConfig.showStats;
   syncStatsUi();
@@ -367,6 +370,14 @@ function bindControls() {
     currentConfig.steamId = "";
     updateGeneratedUrl();
     debouncedLoadPreview(steamInput.value);
+  });
+
+  const twitchInput = document.getElementById("twitch-login") as HTMLInputElement;
+  twitchInput.addEventListener("input", () => {
+    // Accepts a bare login, a twitch.tv/<name> link, or an @handle; the URL only
+    // carries the normalized login (empty when it isn't a valid channel name).
+    currentConfig.twitchLogin = normalizeTwitchLogin(twitchInput.value);
+    updateGeneratedUrl();
   });
 
   for (const [id, key] of Object.entries(checkboxMap)) {
@@ -420,11 +431,12 @@ function bindControls() {
   });
 
   document.getElementById("reset-btn")!.addEventListener("click", () => {
-    const steamId = currentConfig.steamId;
+    const { steamId, twitchLogin } = currentConfig;
     currentConfig = {
       ...DEFAULT_CONFIG,
       stats: [...DEFAULT_CONFIG.stats],
       steamId,
+      twitchLogin,
     };
     syncControlsFromConfig();
     renderPreview();
@@ -459,6 +471,12 @@ function init() {
             <label class="field-label" for="steam-id">Steam ID</label>
             <input type="text" id="steam-id" class="input" placeholder="Steam64 ID, profile link, or vanity name (e.g. kapahiii)">
             <span class="field-hint">Paste your profile URL, a Steam64 ID, or just your custom URL name.</span>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="twitch-login">Twitch username <span class="field-optional">(optional)</span></label>
+            <input type="text" id="twitch-login" class="input" placeholder="your channel name" autocomplete="off" spellcheck="false">
+            <span class="field-hint">When set, win/loss resets each time you go live and freezes (keeping the last stream's record) when you go offline. Needs the Steam proxy Worker with Twitch keys — see the README.</span>
           </div>
 
           <div class="field">
