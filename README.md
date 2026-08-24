@@ -4,105 +4,123 @@
 
 # CS2 Stats Overlay
 
-An OBS browser-source widget that shows your CS2 Premier rating, rank badge, <br/> stats, and recent match history — powered by the Leetify API.
+A free OBS / StreamElements overlay that shows your CS2 Premier rating, rank badge, <br/> stats, and recent match history live on stream — powered by the Leetify API.
 
-**Free & open source** · Built with [TypeScript](https://www.typescriptlang.org) and [Vite](https://vitejs.dev)
+**Free & open source** · No login, no install for streamers — just paste a URL
 
 [![license MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![built with TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/sidkapahi/cs2-stats-overlay/pulls)
 
-**[Open Customizer](https://cs2widget.kapkit.ca/)** · **[Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)**
+### **[👉 Create Your Overlay](https://cs2widget.kapkit.ca/)** · [Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)
 
 </div>
 
-> [!WARNING]
-> **This project was built with AI assistance (vibe coded).** While it works, the
-> code hasn't been professionally audited — use at your own risk. If you get a
-> chance, feel free to review the code before deploying. PRs and fixes are always
-> welcome. Thank You!
+---
 
 ## Overview
 
-CS2 Stats Overlay renders a compact, transparent stats card you can drop straight
-into OBS as a Browser Source. Data is fetched live from the
-[Leetify API](https://leetify.com).
+CS2 Stats Overlay puts a clean, transparent stats card on your stream that stays
+up to date on its own. You point it at your Steam profile, pick what to show, and
+drop the generated URL into OBS, Streamlabs, or StreamElements. Stats come live
+from [Leetify](https://leetify.com) and refresh automatically — no software to
+run, no account to make on this site.
+
+**What viewers see:**
 
 - **Live Premier rating** with a per-tier **rank badge** (Gray, Light Blue, Blue,
-  Purple, Pink, Red, Gold) — or a plain rank-coloured number when the badge is off
+  Purple, Pink, Red, Gold) — or a plain rank-coloured number if you prefer
 - **Rank-point change** from your last Premier match (e.g. `+250`)
 - **Win / loss pills** and core stats: win rate, aim rating, K/D
-- **Twitch session W/L** (optional) — enter your Twitch name and the W/L resets
-  when you go live and freezes when you go offline (see below)
 - **Recent match-history strip** (W / L / T)
-- **Customizer UI** to configure options and generate widget URLs
-- **Auto-refresh** on a configurable interval
-- **Transparent background** — works on any stream layout
+- **Twitch session W/L** (optional) — resets when you go live, freezes when you
+  go offline, so it tracks *today's* stream instead of a rolling window
+- **Transparent background** that sits on any layout
 
-## Getting Started
+Everything is toggleable, so you can run a minimal rating-only badge or the full
+stats card — your call.
 
-```bash
-npm install
-cp .env.example .env.local   # then paste your Leetify Public API key
-npm run dev
-```
+> [!NOTE]
+> This project was built with AI assistance ("vibe coded"). It works and is used
+> on live streams, but the code hasn't had a formal security audit. It's a static
+> site that only reads public stats — use at your own discretion, and PRs are
+> always welcome.
 
-The customizer runs at `http://localhost:5173/` and the widget at `http://localhost:5173/widget/`.
+## Use or Create an Overlay
 
-`VITE_LEETIFY_KEY` is optional locally — without it, requests still work but hit
-Leetify's stricter unauthenticated rate limits. For the deployed site, set the
-same name as a **GitHub Actions repository secret** (Settings → Secrets and
-variables → Actions) so it's injected into the build.
+You don't need to install anything to use the overlay. The hosted customizer
+builds your URL for you.
 
-## Requirements
+### Before you start
 
-- **Leetify account** with match tracking enabled — create one at
-  [leetify.com](https://leetify.com) and make sure your profile is connected to Steam
-- **Matchmaking share code** — required for Leetify to automatically sync your
-  matches. Without it, data updates will be delayed.
-  1. Get your Authentication Code from [Steam](https://help.steampowered.com/en/wizard/HelpWithGameIssue?appid=730&issueid=128)
-  2. Enter it on Leetify's [Data Sources](https://leetify.com/app/data-sources) page under the Matchmaking tab
-  3. Once active, Leetify will pick up your matches shortly after they finish
-- **Steam64 ID or profile link** — paste your Steam profile URL straight into
-  the customizer and it pulls out the Steam64 ID for you. A
-  `steamcommunity.com/profiles/…` link (or a raw Steam64 ID) works out of the
-  box; a custom `steamcommunity.com/id/…` link needs the optional Steam proxy
-  Worker deployed (see below). You can still look up a raw ID at
-  [steamid.io](https://steamid.io) if you prefer.
+You'll need your CS2 stats flowing into Leetify:
 
-## Usage
+- **A [Leetify](https://leetify.com) account** connected to your Steam account,
+  with match tracking enabled.
+- **A matchmaking share code** so Leetify syncs your matches automatically:
+  1. Get your Authentication Code from
+     [Steam](https://help.steampowered.com/en/wizard/HelpWithGameIssue?appid=730&issueid=128)
+  2. Enter it on Leetify's [Data Sources](https://leetify.com/app/data-sources)
+     page under the **Matchmaking** tab
+  3. Leetify then picks up your matches shortly after each one finishes
+- **Your Steam profile link** (or Steam64 ID). Paste your profile URL into the
+  customizer and it pulls the ID out for you. A `steamcommunity.com/profiles/…`
+  link or a raw Steam64 ID works out of the box.
 
-1. Open the [customizer](https://cs2widget.kapkit.ca/)
-2. Enter your Steam64 ID or paste your Steam profile link
-3. Toggle display options (avatar, name, rank badge, rank change, stats, match history)
-4. Set the number of recent matches and refresh interval
-5. Copy the generated widget URL
-6. In OBS, add a **Browser Source** and paste the URL
-7. Set the recommended size to **660 × 180** (adjust as needed)
+### Create your overlay
 
-### Add to your stream (StreamElements Custom Widget)
+1. Open the **[customizer](https://cs2widget.kapkit.ca/)**
+2. Paste your **Steam profile link** or Steam64 ID
+3. Toggle what to show — avatar, name, rank badge, rank change, stats, match history
+4. Set how many recent matches to show and how often it refreshes
+5. Copy the generated **widget URL** (or download the StreamElements bundle — see below)
+
+### Add it to OBS or Streamlabs
+
+1. Add a new **Browser Source**
+2. Paste your widget URL
+3. Set the size to about **660 × 180** (adjust to taste)
+
+That's it — the overlay refreshes on its own.
+
+### Add it to StreamElements
 
 Under the widget URL, the customizer has a **Download Zip for StreamElements**
-button. It grabs a **StreamElements Custom Widget** bundle (`widget.html`,
-`widget.css`, `widget.js`, `fields.json`, `data.json`, plus `widget-url.txt` and
-a `README.txt`). Paste each file into its matching tab in the Custom Widget
-editor (HTML / CSS / JS / FIELDS / DATA). The fields come pre-filled with your
-chosen options and stay editable **inside StreamElements** — Steam ID, toggles,
-stats, font, background colour and opacity — so you can tweak the overlay there
-without coming back to the customizer.
-
-Prefer OBS or Streamlabs? Just copy the **widget URL** above and add it as a
-**Browser Source** (recommended size 660 × 180).
+button. It builds a **Custom Widget** bundle (`widget.html`, `widget.css`,
+`widget.js`, `fields.json`, `data.json`, plus `widget-url.txt` and a
+`README.txt`). Paste each file into its matching tab in the Custom Widget editor
+(HTML / CSS / JS / FIELDS / DATA). The fields come pre-filled with your chosen
+options and stay editable **inside StreamElements** — Steam ID, toggles, stats,
+font, background colour and opacity — so you can tweak the overlay there without
+returning to the customizer.
 
 > [!NOTE]
 > There's no server behind this site, so it can't push an overlay straight into
-> your StreamElements account (that needs an account login and a backend). The
-> bundle is the file set you paste into the Custom Widget editor, pre-filled to
-> save you the manual setup.
+> your StreamElements account (that needs a login and a backend). The bundle is
+> the file set you paste into the Custom Widget editor, pre-filled to save you
+> the manual setup.
+
+### Twitch session win/loss (optional)
+
+By default the W/L pills tally every match in Leetify's recent window. Enter your
+**Twitch username** in the customizer and they become a **per-stream record**
+instead:
+
+- Resets to `W0 L0` when your channel **goes live**
+- Counts only matches finished **during that stream**
+- **Freezes** (keeping the last stream's record) when you go **offline**
+
+Your session is saved in the browser, so refreshing the OBS source mid-stream
+doesn't lose it. It only reads the **public** "is this channel live?" status —
+you never log in.
+
+> This feature relies on a small proxy the project owner hosts. If it's not
+> available on the site you're using, the pills fall back to the normal
+> rolling-window behaviour.
 
 ## Query Parameters
 
-The widget URL supports these parameters:
+If you'd rather hand-craft the URL, the widget accepts these parameters:
 
 | Parameter    | Default | Description                        |
 | ------------ | ------- | ---------------------------------- |
@@ -117,42 +135,79 @@ The widget URL supports these parameters:
 | `matchCount` | `10`    | Number of recent matches           |
 | `refresh`    | `60`    | Refresh interval in seconds        |
 
-## Player Avatars & custom profile links (optional)
+## For Developers
 
-Leetify's public API doesn't return a player avatar, and this static site can't
-call Steam's Web API directly (it needs a secret key and sends no CORS headers).
-The small Cloudflare Worker in [`worker/`](./worker) covers both: it fetches
-avatars **and** resolves custom `steamcommunity.com/id/…` profile links to a
-Steam64 ID. Deploy it and set `VITE_AVATAR_PROXY_URL` to its URL — full steps in
+Want to run it locally, self-host it, or contribute? Here's the setup.
+
+### Run locally
+
+```bash
+npm install
+cp .env.example .env.local   # optional: paste your Leetify Public API key
+npm run dev
+```
+
+- Customizer: `http://localhost:5173/`
+- Widget: `http://localhost:5173/widget/`
+
+`VITE_LEETIFY_KEY` is optional — without it, requests still work but hit
+Leetify's stricter unauthenticated rate limits. For a deployed site, set the
+same name as a **GitHub Actions repository secret** (Settings → Secrets and
+variables → Actions) so it's injected into the build.
+
+### Build
+
+```bash
+npm run build     # tsc + vite build → static output
+npm run preview   # preview the production build
+```
+
+The output is a plain static site (the customizer and the widget), deployable to
+any static host — the project ships with GitHub Pages via a `CNAME`.
+
+### Optional: avatars & custom profile links (Cloudflare Worker)
+
+Leetify's public API doesn't return a player avatar, and a static site can't call
+Steam's Web API directly (it needs a secret key and sends no CORS headers). The
+small Cloudflare Worker in [`worker/`](./worker) covers both: it fetches avatars
+**and** resolves custom `steamcommunity.com/id/…` profile links to a Steam64 ID.
+Deploy it and set `VITE_AVATAR_PROXY_URL` to its URL — full steps in
 [worker/README.md](./worker/README.md). Your Steam API key stays on the Worker
 and never reaches the browser. Skip this and the widget still runs — just without
-avatars, and custom-URL links must be entered as a Steam64 ID or a
-`/profiles/…` link instead.
+avatars, and custom-URL links must be entered as a Steam64 ID or a `/profiles/…`
+link instead.
 
-## Twitch session win/loss (optional)
+### Optional: Twitch live-status (second Cloudflare Worker)
 
-By default the W/L pills tally every match in Leetify's recent window. Enter your
-**Twitch username** in the customizer and they become a **per-stream record**
-instead:
-
-- Resets to `W0 L0` when your channel **goes live**
-- Counts only matches finished **during that stream**
-- **Freezes** (keeping the last stream's record) when you **go offline**
-
-State is kept per player in the browser's `localStorage`, so refreshing the OBS
-source mid-stream doesn't lose your session. Live status is polled every ~15
-seconds, independent of the slower stats refresh. The streamer never logs in —
-it only reads the **public** "is this channel live?" status, using the username
-as a lookup key.
-
-This uses a **second Cloudflare Worker** (`worker/twitch-live-proxy.js`, separate
-from the avatar proxy so the credentials live apart). You register a Twitch app,
-deploy the Worker with your `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` as
-secrets, and point the site at it with `VITE_TWITCH_PROXY_URL`. Full steps in
+The Twitch session W/L feature uses a **second** Cloudflare Worker
+(`worker/twitch-live-proxy.js`, separate from the avatar proxy so the credentials
+live apart). Register a Twitch app, deploy the Worker with your
+`TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` as secrets, and point the site at it
+with `VITE_TWITCH_PROXY_URL`. Full steps in
 [worker/README.md](./worker/README.md#twitch-live-status-proxy-cloudflare-worker).
-Without it, the pills simply keep their normal rolling-window behaviour.
+Without it, the pills keep their normal rolling-window behaviour.
 
-## Tech Stack
+### Environment variables
+
+| Variable                 | Required | Purpose                                                   |
+| ------------------------ | -------- | --------------------------------------------------------- |
+| `VITE_LEETIFY_KEY`       | No       | Leetify Public API key — raises rate limits (secret)      |
+| `VITE_AVATAR_PROXY_URL`  | No       | Steam avatar / custom-link proxy Worker URL (public)      |
+| `VITE_TWITCH_PROXY_URL`  | No       | Twitch live-status proxy Worker URL (public)              |
+
+See [`.env.example`](.env.example) for details on each.
+
+### Project layout
+
+```
+src/customizer/   Customizer UI (build & preview widget URLs)
+src/widget/       The overlay itself (rendered in OBS / browser source)
+src/shared/       API client, rank logic, rendering, session, export helpers
+worker/           Optional Cloudflare Workers (avatar + Twitch proxies)
+public/           Static assets (fonts, CNAME)
+```
+
+### Tech Stack
 
 | Tool | Purpose |
 | ---- | ------- |
@@ -160,6 +215,12 @@ Without it, the pills simply keep their normal rolling-window behaviour.
 | [Vite](https://vitejs.dev) | Multi-page build & dev server |
 | [Leetify API](https://leetify.com) | Live CS2 stats & match data |
 | [Cloudflare Workers](https://workers.cloudflare.com) | Optional avatar + Twitch live-status proxies |
+
+### Contributing
+
+Issues and PRs are welcome — bug fixes, new display options, and code review of
+the AI-assisted parts especially. Open an
+[issue](https://github.com/sidkapahi/cs2-stats-overlay/issues) or send a PR.
 
 ## License
 
