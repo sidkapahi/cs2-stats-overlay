@@ -1,35 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@700&display=swap');
 
 /* Stratum2 is the CS2 in-game typeface (proprietary — not bundled). Drop the
-   licensed files into public/fonts/ (see public/fonts/README.md); either .woff2
-   (smaller, preferred) or .ttf works — each face lists both and the browser
-   uses whichever is present, falling through the missing one. Until a file
-   lands the UI falls back to Inter automatically. Absolute /base/ URLs are left
-   untouched by Vite, so a missing file 404s at runtime instead of breaking the
-   build. */
+   licensed webfont-kit files into public/fonts/ (see public/fonts/README.md).
+   Each face lists .woff2 / .woff / .ttf and the browser uses whichever is
+   present, falling through the missing ones — so the .woff (or .ttf) from a
+   Font-Squirrel-style kit is enough. Until a file lands the UI falls back to
+   Inter automatically. Absolute /base/ URLs are left untouched by Vite, so a
+   missing file 404s at runtime instead of breaking the build. */
 @font-face {
   font-family: 'Stratum2';
   font-weight: 400;
   font-style: normal;
   font-display: swap;
-  src: url('/cs2-stats-overlay/fonts/Stratum2-Regular.woff2') format('woff2'),
-       url('/cs2-stats-overlay/fonts/Stratum2-Regular.ttf') format('truetype');
+  src: url('/cs2-stats-overlay/fonts/stratum2-regular-webfont.woff2') format('woff2'),
+       url('/cs2-stats-overlay/fonts/stratum2-regular-webfont.woff') format('woff'),
+       url('/cs2-stats-overlay/fonts/stratum2-regular-webfont.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Stratum2';
   font-weight: 500;
   font-style: normal;
   font-display: swap;
-  src: url('/cs2-stats-overlay/fonts/Stratum2-Medium.woff2') format('woff2'),
-       url('/cs2-stats-overlay/fonts/Stratum2-Medium.ttf') format('truetype');
+  src: url('/cs2-stats-overlay/fonts/stratum2-medium-webfont.woff2') format('woff2'),
+       url('/cs2-stats-overlay/fonts/stratum2-medium-webfont.woff') format('woff'),
+       url('/cs2-stats-overlay/fonts/stratum2-medium-webfont.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Stratum2';
   font-weight: 700;
   font-style: normal;
   font-display: swap;
-  src: url('/cs2-stats-overlay/fonts/Stratum2-Bold.woff2') format('woff2'),
-       url('/cs2-stats-overlay/fonts/Stratum2-Bold.ttf') format('truetype');
+  src: url('/cs2-stats-overlay/fonts/stratum2-bold-webfont.woff2') format('woff2'),
+       url('/cs2-stats-overlay/fonts/stratum2-bold-webfont.woff') format('woff'),
+       url('/cs2-stats-overlay/fonts/stratum2-bold-webfont.ttf') format('truetype');
 }
 
 :root {
