@@ -562,33 +562,9 @@ function init() {
         </div>
 
         <div class="setup-body">
-          <section class="group">
+          <section class="group group-steam">
             <h2 class="group-label">STEAM</h2>
             <input type="text" id="steam-id" class="field-input" placeholder="Steam64 ID, profile link, or vanity name" autocomplete="off" spellcheck="false">
-          </section>
-
-          <div class="divider" role="separator"></div>
-
-          <section class="group">
-            <h2 class="group-label">DATA</h2>
-            <div class="stack">
-              <label class="check"><input type="checkbox" id="show-change"><span class="check-text">Rank Diff</span></label>
-              <label class="check"><input type="checkbox" id="show-history"><span class="check-text">Match History</span></label>
-
-              <div class="check-group">
-                <label class="check"><input type="checkbox" id="show-stats"><span class="check-text">Stats (${STAT_MAX} Max)</span></label>
-                <div class="pill-row" id="stats-pills">${statPillsHtml()}</div>
-              </div>
-
-              <div class="check-group">
-                <label class="check"><input type="checkbox" id="show-wl"><span class="check-text">Win Loss Record</span></label>
-                <div class="seg-row" id="wl-mode">
-                  <button type="button" class="seg" data-mode="leetify">LEETIFY</button>
-                  <button type="button" class="seg" data-mode="twitch">TWITCH LIVE</button>
-                </div>
-                <input type="text" id="twitch-login" class="field-input" placeholder="Twitch username" autocomplete="off" spellcheck="false" hidden>
-              </div>
-            </div>
           </section>
 
           <div class="divider" role="separator"></div>
@@ -632,6 +608,31 @@ function init() {
                   <input type="text" id="bg-opacity" class="field-input opacity" value="100%" inputmode="numeric" aria-label="Background opacity percent">
                 </div>
               </div>
+            </div>
+          </section>
+
+          <div class="divider" role="separator"></div>
+
+          <section class="group">
+            <h2 class="group-label">DATA</h2>
+            <div class="stack">
+              <label class="check"><input type="checkbox" id="show-change"><span class="check-text">Loss/Gain</span></label>
+
+              <div class="check-group">
+                <label class="check"><input type="checkbox" id="show-wl"><span class="check-text">Win Loss Record</span></label>
+                <div class="seg-row" id="wl-mode">
+                  <button type="button" class="seg" data-mode="leetify">LEETIFY</button>
+                  <button type="button" class="seg" data-mode="twitch">TWITCH LIVE</button>
+                </div>
+                <input type="text" id="twitch-login" class="field-input" placeholder="Twitch username" autocomplete="off" spellcheck="false" hidden>
+              </div>
+
+              <div class="check-group">
+                <label class="check"><input type="checkbox" id="show-stats"><span class="check-text">Stats (${STAT_MAX} Max)</span></label>
+                <div class="pill-row" id="stats-pills">${statPillsHtml()}</div>
+              </div>
+
+              <label class="check"><input type="checkbox" id="show-history"><span class="check-text">Match History</span></label>
             </div>
           </section>
         </div>

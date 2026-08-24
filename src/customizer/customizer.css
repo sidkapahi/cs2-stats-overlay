@@ -205,6 +205,12 @@ body {
 .group {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+}
+
+/* STEAM sits tighter to its single input than the DATA / DESIGN groups do to
+   their stacks, matching the design. */
+.group-steam {
   gap: 12px;
 }
 
@@ -219,13 +225,13 @@ body {
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
 }
 
 .check-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 /* Thin rule that breaks the setup column into its STEAM / DATA / DESIGN
@@ -365,15 +371,14 @@ select.field-input {
 .seg {
   flex: 1;
   min-width: 0;
-  height: 40px;
-  padding: 0 8px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-field);
   background: var(--pill-dark);
-  color: var(--text);
+  color: #f0f0f0;
   font-family: var(--font-ui);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: -0.01em;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
@@ -381,7 +386,7 @@ select.field-input {
 
 .pill.selected,
 .seg.selected {
-  background: #ffffff;
+  background: #f0f0f0;
   color: var(--pill-dark);
 }
 
