@@ -228,6 +228,16 @@ body {
   gap: 8px;
 }
 
+/* Thin rule that breaks the setup column into its STEAM / DATA / DESIGN
+   categories. Sits as a flex child of .setup-body so it picks up the 32px
+   gap on each side. */
+.divider {
+  height: 1px;
+  width: 100%;
+  background: #373737;
+  border-radius: 10px;
+}
+
 /* ---- Inputs -------------------------------------------------------------- */
 .field-input {
   width: 100%;
@@ -344,6 +354,13 @@ select.field-input {
   gap: 6px;
 }
 
+/* The rows set display:flex, which would otherwise beat the [hidden] UA rule,
+   so collapse them explicitly when their parent toggle is off. */
+.pill-row[hidden],
+.seg-row[hidden] {
+  display: none;
+}
+
 .pill,
 .seg {
   flex: 1;
@@ -371,12 +388,6 @@ select.field-input {
 .pill:disabled,
 .seg:disabled {
   cursor: not-allowed;
-}
-
-.pill-row.disabled,
-.seg-row.disabled {
-  opacity: 0.4;
-  pointer-events: none;
 }
 
 /* ---- Font combobox ------------------------------------------------------- */
