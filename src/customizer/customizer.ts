@@ -616,13 +616,7 @@ function init() {
           <section class="group">
             <h2 class="group-label">DATA</h2>
             <div class="stack">
-              <label class="check"><input type="checkbox" id="show-change"><span class="check-text">Rank Diff</span></label>
-              <label class="check"><input type="checkbox" id="show-history"><span class="check-text">Match History</span></label>
-
-              <div class="check-group">
-                <label class="check"><input type="checkbox" id="show-stats"><span class="check-text">Stats (${STAT_MAX} Max)</span></label>
-                <div class="pill-row" id="stats-pills">${statPillsHtml()}</div>
-              </div>
+              <label class="check"><input type="checkbox" id="show-change"><span class="check-text">Loss/Gain</span></label>
 
               <div class="check-group">
                 <label class="check"><input type="checkbox" id="show-wl"><span class="check-text">Win Loss Record</span></label>
@@ -632,6 +626,13 @@ function init() {
                 </div>
                 <input type="text" id="twitch-login" class="field-input" placeholder="Twitch username" autocomplete="off" spellcheck="false" hidden>
               </div>
+
+              <div class="check-group">
+                <label class="check"><input type="checkbox" id="show-stats"><span class="check-text">Stats (${STAT_MAX} Max)</span></label>
+                <div class="pill-row" id="stats-pills">${statPillsHtml()}</div>
+              </div>
+
+              <label class="check"><input type="checkbox" id="show-history"><span class="check-text">Match History</span></label>
             </div>
           </section>
         </div>
