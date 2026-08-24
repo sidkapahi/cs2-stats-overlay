@@ -668,19 +668,14 @@ select.field-input {
   flex-shrink: 0;
 }
 
-/* StreamElements mark shown alongside the "Streamelements Widget" label. */
-.export-zip .field-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
+/* StreamElements mark used in place of the download icon inside the ZIP
+   button. */
 .se-logo {
   display: inline-flex;
 }
 
 .se-logo svg {
-  height: 14px;
+  height: 18px;
   width: auto;
   flex-shrink: 0;
 }
