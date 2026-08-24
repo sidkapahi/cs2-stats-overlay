@@ -629,10 +629,10 @@ select.field-input {
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 43px;
+  height: 46px;
   background: var(--input-bg);
   border-radius: var(--radius-field);
-  padding: 0 16px;
+  padding: 0 17px;
 }
 
 .url-input {
@@ -643,15 +643,24 @@ select.field-input {
   outline: none;
   color: var(--text);
   font-family: var(--font-ui);
+  font-weight: 700;
   font-size: 14px;
   text-overflow: ellipsis;
+  transition: color 0.18s ease;
 }
 
 .url-input::placeholder {
   color: #7e7e7e;
+  font-weight: 400;
+}
+
+/* While the copy confirmation shows, the URL text reads "Link Copied!". */
+.url-box.copied .url-input {
+  color: #6fce72;
 }
 
 .icon-btn {
+  position: relative;
   flex-shrink: 0;
   width: 20px;
   height: 20px;
@@ -663,18 +672,44 @@ select.field-input {
   transition: color 0.12s;
 }
 
+.icon-btn:hover {
+  color: #fff;
+}
+
+/* The copy and check icons are stacked so one can crossfade into the other. */
+.icon-copy,
+.icon-check {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
 .icon-btn svg {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.icon-btn:hover {
-  color: #fff;
+.icon-copy {
+  opacity: 1;
+  transform: scale(1);
 }
 
-.icon-btn.copied {
+.icon-check {
+  opacity: 0;
+  transform: scale(0.5);
   color: #6fce72;
+}
+
+.url-box.copied .icon-copy {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.url-box.copied .icon-check {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .export-zip {
@@ -701,7 +736,7 @@ select.field-input {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 43px;
+  height: 46px;
   padding: 0 18px;
   background: #131315;
   border: 1px solid var(--line);
