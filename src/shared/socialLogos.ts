@@ -10,7 +10,8 @@
 // text color; a brand SVG with its own colors will paint those instead, which is
 // usually what you want when dropping in an official logo.
 import buyMeACoffeeLogo from "../../assets/logos/buymeacoffee.svg?raw";
+import gitHubLogo from "../../assets/logos/github.svg?raw";
 import streamElementsLogo from "../../assets/logos/streamelements.svg?raw";
 import twitchLogo from "../../assets/logos/twitch.svg?raw";
 
-export { buyMeACoffeeLogo, streamElementsLogo, twitchLogo };
+export { buyMeACoffeeLogo, gitHubLogo, streamElementsLogo, twitchLogo };

@@ -175,6 +175,14 @@ body {
   color: #ffffff;
 }
 
+/* Keep the GitHub mark to icon size next to its wordmark, regardless of the
+   uploaded SVG's own width/height attrs. */
+.link-repo svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 /* Size the Buy Me a Coffee / Twitch marks by height so a swapped-in custom SVG
    (icon or full wordmark, with or without its own width/height attrs) always
    fits the chip. */

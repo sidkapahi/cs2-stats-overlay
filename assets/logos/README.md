@@ -7,6 +7,7 @@ needed.
 
 | File                 | Where it shows up                                              |
 | -------------------- | ------------------------------------------------------------- |
+| `github.svg`         | The dark repo button in the header link row                   |
 | `twitch.svg`         | The purple Twitch button in the header link row               |
 | `buymeacoffee.svg`   | The yellow Buy Me a Coffee button in the header link row      |
 | `streamelements.svg` | Next to the "Streamelements Widget" label in the export bar   |
@@ -20,9 +21,9 @@ That's it — the new logo is picked up automatically.
 
 ## Tips
 
-- **Any `.svg` works** — an icon-only mark or a full wordmark. Each logo is
-  sized by height (Twitch/Buy Me a Coffee: 18px, StreamElements: 14px) and its
-  width scales to match, so it won't overflow its button.
+- **Any `.svg` works** — an icon-only mark or a full wordmark. GitHub is pinned
+  to a 16px square; Twitch and Buy Me a Coffee are sized by height (18px) with
+  width scaling to match; StreamElements is 14px — so none overflow their button.
 - **Colors:** the seeded placeholders use `fill="currentColor"` /
   `stroke="currentColor"` so they inherit the button's text color. If your SVG
   has its own fill/stroke colors (like an official brand logo usually does),
