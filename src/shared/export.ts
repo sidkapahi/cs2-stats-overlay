@@ -91,6 +91,7 @@ function bundleJs(base: string): string {
     p.set('matchCount', String(f.matchCount || '10'));
     p.set('refresh', String(f.refreshInterval || '60'));
     if (f.font) p.set('font', String(f.font));
+    if (f.fontWeight) p.set('fw', String(f.fontWeight));
     if (f.bgColor) p.set('bg', String(f.bgColor).replace(/^#/, ''));
     if (f.bgOpacity !== undefined && f.bgOpacity !== null && f.bgOpacity !== '') {
       p.set('bgo', String(f.bgOpacity));
@@ -181,6 +182,21 @@ function bundleFields(config: WidgetConfig): string {
       type: 'googleFont',
       label: 'Font',
       value: config.font,
+      group: 'Design',
+    },
+    fontWeight: {
+      type: 'dropdown',
+      label: 'Font weight',
+      value: String(config.fontWeight),
+      options: {
+        '300': 'Light',
+        '400': 'Regular',
+        '500': 'Medium',
+        '600': 'Semibold',
+        '700': 'Bold',
+        '800': 'Extrabold',
+        '900': 'Black',
+      },
       group: 'Design',
     },
     bgColor: {

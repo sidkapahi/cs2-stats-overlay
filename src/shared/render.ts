@@ -133,8 +133,15 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
     config.showAvatar ? 'has-avatar' : 'no-avatar',
   ].join(' ');
 
-  // Design overrides: configurable background tint/opacity and font family.
-  const rootStyle = `background: ${bgRgba(config.bgColor, config.bgOpacity)}; font-family: ${fontStack(config.font)};`;
+  // Design overrides: configurable background tint/opacity, font family, and
+  // weight. `--w-weight` drives the body/name text; `--w-weight-strong` is one
+  // step heavier for the rating/diff, so the default (700) reproduces the
+  // original 700/800 hierarchy exactly.
+  const weight = Math.max(100, Math.min(900, config.fontWeight || 700));
+  const weightStrong = Math.min(900, weight + 100);
+  const rootStyle = `background: ${bgRgba(config.bgColor, config.bgOpacity)}; font-family: ${fontStack(
+    config.font,
+  )}; --w-weight: ${weight}; --w-weight-strong: ${weightStrong};`;
 
   return `
     <div class="widget ${modifiers}" style="${rootStyle}">

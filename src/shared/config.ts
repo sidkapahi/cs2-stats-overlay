@@ -52,6 +52,9 @@ export function configToParams(config: WidgetConfig): URLSearchParams {
     params.set('refresh', String(config.refreshInterval));
   }
   if (config.font !== DEFAULT_CONFIG.font) params.set('font', config.font);
+  if (config.fontWeight !== DEFAULT_CONFIG.fontWeight) {
+    params.set('fw', String(config.fontWeight));
+  }
   if (config.bgColor !== DEFAULT_CONFIG.bgColor) {
     params.set('bg', config.bgColor.replace(/^#/, ''));
   }
@@ -76,6 +79,7 @@ export function paramsToConfig(params: URLSearchParams): WidgetConfig {
 
   const bg = params.get('bg');
   const bgo = params.get('bgo');
+  const fw = parseInt(params.get('fw') ?? '', 10);
 
   return {
     steamId: params.get('steamId') ?? DEFAULT_CONFIG.steamId,
@@ -91,6 +95,8 @@ export function paramsToConfig(params: URLSearchParams): WidgetConfig {
     matchCount: parseInt(params.get('matchCount') ?? String(DEFAULT_CONFIG.matchCount), 10),
     refreshInterval: parseInt(params.get('refresh') ?? String(DEFAULT_CONFIG.refreshInterval), 10),
     font: params.get('font') ?? DEFAULT_CONFIG.font,
+    fontWeight:
+      Number.isFinite(fw) && fw >= 100 && fw <= 900 ? fw : DEFAULT_CONFIG.fontWeight,
     bgColor: bg ? `#${bg.replace(/^#/, '')}` : DEFAULT_CONFIG.bgColor,
     bgOpacity: bgo != null ? Math.max(0, Math.min(100, parseInt(bgo, 10) || 0)) : DEFAULT_CONFIG.bgOpacity,
   };
