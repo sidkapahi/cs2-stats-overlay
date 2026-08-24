@@ -12,7 +12,15 @@ A free OBS / StreamElements overlay that shows your CS2 Premier rating, rank bad
 [![built with TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/sidkapahi/cs2-stats-overlay/pulls)
 
-### **[👉 Create Your Overlay](https://cs2widget.kapkit.ca/)** · [Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)
+<br/>
+
+<a href="https://cs2widget.kapkit.ca/"><img src="assets/create-overlay-button.svg" alt="Create Your Overlay" height="54"></a>
+
+<sub>No account, no install — build your widget URL in the browser.</sub>
+
+<br/><br/>
+
+**[How it works](#use-or-create-an-overlay)** · **[Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)**
 
 </div>
 
