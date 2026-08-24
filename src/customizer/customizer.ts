@@ -43,7 +43,6 @@ const ICON_STREAMELEMENTS = streamElementsLogo;
 const ICON_CARET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
 const ICON_COPY = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`;
 const ICON_WARNING = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>`;
-const ICON_DOWNLOAD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>`;
 
 // Prompt shown in the preview before a Steam ID resolves.
 const PROMPT_TEXT = "ENTER YOUR STEAM NAME OR PROFILE LINK";
@@ -650,8 +649,8 @@ function init() {
             </div>
           </div>
           <div class="export-zip">
-            <label class="field-label"><span class="se-logo">${ICON_STREAMELEMENTS}</span>Streamelements Widget</label>
-            <button type="button" id="export-zip" class="zip-btn" disabled>${ICON_DOWNLOAD}<span class="zip-label">DOWNLOAD ZIP</span></button>
+            <label class="field-label">Streamelements Widget</label>
+            <button type="button" id="export-zip" class="zip-btn" disabled><span class="se-logo">${ICON_STREAMELEMENTS}</span><span class="zip-label">DOWNLOAD ZIP</span></button>
           </div>
         </div>
       </div>
