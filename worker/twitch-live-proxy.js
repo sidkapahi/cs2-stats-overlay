@@ -28,6 +28,7 @@
 const ALLOWED_ORIGINS = new Set([
   'https://levanisart.github.io',
   'https://sidkapahi.github.io',
+  'https://cs2widget.kapkit.ca',
   'http://localhost:5173', // local dev (npm run dev)
 ]);
 

@@ -12,7 +12,7 @@ An OBS browser-source widget that shows your CS2 Premier rating, rank badge, <br
 [![built with TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/sidkapahi/cs2-stats-overlay/pulls)
 
-**[Open Customizer](https://sidkapahi.github.io/cs2-stats-overlay/)** · **[Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)**
+**[Open Customizer](https://cs2widget.kapkit.ca/)** · **[Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)**
 
 </div>
 
@@ -72,7 +72,7 @@ variables → Actions) so it's injected into the build.
 
 ## Usage
 
-1. Open the [customizer](https://sidkapahi.github.io/cs2-stats-overlay/)
+1. Open the [customizer](https://cs2widget.kapkit.ca/)
 2. Enter your Steam64 ID or paste your Steam profile link
 3. Toggle display options (avatar, name, rank badge, rank change, stats, match history)
 4. Set the number of recent matches and refresh interval

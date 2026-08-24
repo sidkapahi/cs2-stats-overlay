@@ -12,27 +12,27 @@
   font-weight: 400;
   font-style: normal;
   font-display: swap;
-  src: url('/cs2-stats-overlay/fonts/stratum2-regular-webfont.woff2') format('woff2'),
-       url('/cs2-stats-overlay/fonts/stratum2-regular-webfont.woff') format('woff'),
-       url('/cs2-stats-overlay/fonts/stratum2-regular-webfont.ttf') format('truetype');
+  src: url('/fonts/stratum2-regular-webfont.woff2') format('woff2'),
+       url('/fonts/stratum2-regular-webfont.woff') format('woff'),
+       url('/fonts/stratum2-regular-webfont.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Stratum2';
   font-weight: 500;
   font-style: normal;
   font-display: swap;
-  src: url('/cs2-stats-overlay/fonts/stratum2-medium-webfont.woff2') format('woff2'),
-       url('/cs2-stats-overlay/fonts/stratum2-medium-webfont.woff') format('woff'),
-       url('/cs2-stats-overlay/fonts/stratum2-medium-webfont.ttf') format('truetype');
+  src: url('/fonts/stratum2-medium-webfont.woff2') format('woff2'),
+       url('/fonts/stratum2-medium-webfont.woff') format('woff'),
+       url('/fonts/stratum2-medium-webfont.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Stratum2';
   font-weight: 700;
   font-style: normal;
   font-display: swap;
-  src: url('/cs2-stats-overlay/fonts/stratum2-bold-webfont.woff2') format('woff2'),
-       url('/cs2-stats-overlay/fonts/stratum2-bold-webfont.woff') format('woff'),
-       url('/cs2-stats-overlay/fonts/stratum2-bold-webfont.ttf') format('truetype');
+  src: url('/fonts/stratum2-bold-webfont.woff2') format('woff2'),
+       url('/fonts/stratum2-bold-webfont.woff') format('woff'),
+       url('/fonts/stratum2-bold-webfont.ttf') format('truetype');
 }
 
 :root {
