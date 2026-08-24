@@ -24,8 +24,8 @@ async function init() {
   const params = new URLSearchParams(window.location.search);
   const config = paramsToConfig(params);
 
-  // Pull in the chosen Google Font (Inter is already bundled).
-  loadFont(config.font);
+  // Pull in the chosen Google Font at the chosen weight (Inter is already bundled).
+  loadFont(config.font, config.fontWeight);
 
   if (!config.steamId) {
     container.innerHTML = renderMessage('Error', 'No Steam ID provided.');

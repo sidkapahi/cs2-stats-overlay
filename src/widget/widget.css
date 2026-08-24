@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700;1,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,800&display=swap');
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -49,7 +49,7 @@ body {
 
 .name {
   font-size: 24px;
-  font-weight: 700;
+  font-weight: var(--w-weight, 700);
   color: #fff;
   line-height: 1;
   white-space: nowrap;
@@ -66,7 +66,7 @@ body {
 /* Plain (no-badge) rating — rank-coloured number */
 .rating-plain {
   font-size: 30px;
-  font-weight: 800;
+  font-weight: var(--w-weight-strong, 800);
   line-height: 1;
   letter-spacing: -0.01em;
   white-space: nowrap;
@@ -106,7 +106,7 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 22px;
-  font-weight: 700;
+  font-weight: var(--w-weight, 700);
   font-style: italic;
   line-height: 1;
   white-space: nowrap;
@@ -124,7 +124,7 @@ body {
 /* Rank-point diff (+250) */
 .rating-diff {
   font-size: 26px;
-  font-weight: 800;
+  font-weight: var(--w-weight-strong, 800);
   line-height: 1;
   white-space: nowrap;
 }
@@ -149,7 +149,7 @@ body {
   border-radius: 12px;
   background: transparent;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: var(--w-weight, 700);
   line-height: 1;
 }
 
@@ -173,7 +173,7 @@ body {
 
 .stat-val {
   font-size: 24px;
-  font-weight: 700;
+  font-weight: var(--w-weight, 700);
   color: #fff;
   line-height: 1;
 }
@@ -200,7 +200,7 @@ body {
   display: flex;
   gap: 14px;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: var(--w-weight, 700);
   line-height: 1;
 }
 

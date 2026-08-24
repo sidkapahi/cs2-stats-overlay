@@ -4,9 +4,10 @@ import {
   resolveVanityUrl,
   type PremierData,
 } from "../shared/api";
+import { brandLogoSrc } from "../shared/brandLogo";
 import { configToParams, normalizeTwitchLogin } from "../shared/config";
 import { downloadOverlayZip } from "../shared/export";
-import { GOOGLE_FONTS, fontStack, loadFont } from "../shared/fonts";
+import { FONT_WEIGHTS, GOOGLE_FONTS, fontStack, loadFont } from "../shared/fonts";
 import { renderMessage, renderWidget } from "../shared/render";
 import { parseSteamInput } from "../shared/steamId";
 import {
@@ -14,10 +15,30 @@ import {
   STAT_KEYS,
   STAT_LABELS,
   STAT_MAX,
+  type StatKey,
   type WidgetConfig,
 } from "../shared/types";
 import "../widget/widget.css";
 import "./customizer.css";
+
+// External links for the header button row.
+const REPO_URL = "https://github.com/sidkapahi/cs2-stats-overlay";
+const BMC_URL = "https://buymeacoffee.com/sidkapahi";
+const TWITCH_URL = "https://twitch.tv/kapowhi";
+
+// ---- Inline icons (self-contained; no expiring remote assets) -------------
+const ICON_GITHUB = `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>`;
+const ICON_BMC = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8z"/><path d="M16 9h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M8 2v2M11 2v2M14 2v2"/></svg>`;
+const ICON_TWITCH = `<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M2.149 0L.537 4.119V20.11h5.4V24h3.043l3.891-3.89h4.38L23.463 14V0H2.149zm19.164 13.119l-3.043 3.043h-5.4l-2.699 2.699v-2.699H5.4V2.163h15.913v10.956zM17.13 5.4h-2.163v6.492h2.163V5.4zm-5.4 0H9.567v6.492h2.163V5.4z"/></svg>`;
+const ICON_CARET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
+const ICON_COPY = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`;
+const ICON_WARNING = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>`;
+const ICON_DOWNLOAD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>`;
+
+// Prompt shown in the preview before a Steam ID resolves.
+const PROMPT_TEXT = "ENTER YOUR STEAM NAME OR PROFILE LINK";
+// Stat pills are shown in the Figma order (K/D, AIM, AVG, WIN %).
+const STAT_PILL_ORDER: StatKey[] = ["kd", "aim", "avg", "winpct"];
 
 let currentConfig: WidgetConfig = { ...DEFAULT_CONFIG, stats: [...DEFAULT_CONFIG.stats] };
 let previewData: PremierData | null = null;
@@ -25,6 +46,10 @@ let previewError: string | null = null;
 let previewLoading = false;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let lastTrackedSteamId: string | null = null;
+// Which source drives the W/L pills: 'leetify' = rolling window, 'twitch' =
+// per-stream session (reveals the Twitch username field). Mirrors whether a
+// Twitch login is set on the config.
+let wlMode: "leetify" | "twitch" = "leetify";
 // Bumped on every new resolve so a slow vanity lookup that finishes after the
 // user has typed something else can't overwrite the newer input's result.
 let resolveToken = 0;
@@ -36,15 +61,16 @@ function getWidgetUrl(): string {
   return `${base}/widget/?${params.toString()}`;
 }
 
-// Never render the widget larger than this in the preview (keeps the original
-// look for light configs); fitPreview only ever scales further *down* to fit.
-const MAX_PREVIEW_SCALE = 0.72;
+// Never render the widget larger than natural size in the preview; fitPreview
+// only ever scales further *down* to fit the (responsive) preview panel.
+const MAX_PREVIEW_SCALE = 1;
 
-// Scales the rendered widget so it always fits inside the fixed preview panel,
-// however long the name or however much content is enabled — the panel size
-// stays put and the widget shrinks to stay within it.
+// Scales the rendered widget so it always fits inside the preview panel, however
+// long the name or however much content is enabled — the panel flexes with the
+// window and the widget shrinks to stay within it.
 function fitPreview() {
-  const area = document.getElementById("preview-widget")!;
+  const area = document.getElementById("preview-widget");
+  if (!area) return;
   const widget = area.querySelector<HTMLElement>(".widget");
   if (!widget) return;
 
@@ -67,38 +93,52 @@ function fitPreview() {
   widget.style.transform = `scale(${scale})`;
 }
 
+function promptCardHtml(text: string): string {
+  return `<div class="preview-prompt">${text}</div>`;
+}
+
 function renderPreview() {
-  const previewEl = document.getElementById("preview-widget")!;
+  const body = document.getElementById("preview-widget");
+  const banner = document.getElementById("preview-banner");
+  const bannerText = document.getElementById("preview-banner-text");
+  if (!body || !banner || !bannerText) return;
 
   if (previewError) {
-    previewEl.innerHTML = renderMessage("Error", previewError);
-  } else if (previewLoading) {
-    previewEl.innerHTML = renderMessage("Loading", "…");
-  } else if (!previewData) {
-    previewEl.innerHTML = renderMessage("Enter a Steam ID or profile link", "—");
+    bannerText.textContent = previewError;
+    banner.hidden = false;
+    // Keep the last good widget behind the banner if we have one; otherwise the
+    // prompt card so the panel never looks broken.
+    body.innerHTML = previewData
+      ? renderWidget(currentConfig, previewData)
+      : promptCardHtml(PROMPT_TEXT);
   } else {
-    previewEl.innerHTML = renderWidget(currentConfig, previewData);
+    banner.hidden = true;
+    if (previewLoading) {
+      body.innerHTML = renderMessage("Loading", "…");
+    } else if (!previewData) {
+      body.innerHTML = promptCardHtml(PROMPT_TEXT);
+    } else {
+      body.innerHTML = renderWidget(currentConfig, previewData);
+    }
   }
 
   fitPreview();
 }
 
-// Export buttons are only usable once there's a real widget URL to hand off.
-const EXPORT_BUTTON_IDS = ["export-zip"];
-
 function updateGeneratedUrl() {
   const urlEl = document.getElementById("generated-url") as HTMLInputElement;
   const url = currentConfig.steamId ? getWidgetUrl() : "";
   urlEl.value = url;
-  for (const id of EXPORT_BUTTON_IDS) {
-    const btn = document.getElementById(id) as HTMLButtonElement | null;
-    if (btn) btn.disabled = !url;
-  }
+
+  const zipBtn = document.getElementById("export-zip") as HTMLButtonElement | null;
+  if (zipBtn) zipBtn.disabled = !url;
+  // Dim the whole export bar until there's a real widget URL to hand off.
+  const bar = document.getElementById("exportbar");
+  if (bar) bar.classList.toggle("is-empty", !url);
 }
 
 // Turns whatever is in the Steam-ID box (a raw Steam64 ID, a full profile URL,
 // or a custom /id/ vanity URL) into a Steam64 ID, then loads the preview for it.
-// Vanity URLs are resolved server-side via the proxy Worker.
 async function resolveAndLoad(rawInput: string) {
   const token = ++resolveToken;
   const parsed = parseSteamInput(rawInput);
@@ -116,8 +156,7 @@ async function resolveAndLoad(rawInput: string) {
   if (parsed.kind === "invalid") {
     currentConfig.steamId = "";
     previewData = null;
-    previewError =
-      "Enter a Steam64 ID or a steamcommunity.com profile link";
+    previewError = "Enter a Steam64 ID or a steamcommunity.com profile link";
     previewLoading = false;
     renderPreview();
     updateGeneratedUrl();
@@ -188,33 +227,30 @@ function debouncedLoadPreview(rawInput: string) {
   debounceTimer = setTimeout(() => resolveAndLoad(rawInput), 600);
 }
 
-// Simple display toggles → config keys. Stats are handled separately because
-// they gate a nested picker (see bindStats).
+// Simple display toggles → config keys. Stats and win/loss gate nested controls,
+// so they're bound separately.
 const checkboxMap: Record<string, keyof WidgetConfig> = {
   "show-avatar": "showAvatar",
   "show-name": "showName",
   "show-change": "showChange",
-  "show-wl": "showWinLoss",
   "show-history": "showMatchHistory",
   "show-badge": "showBadge",
 };
 
-// ---- Stats picker --------------------------------------------------------
-// "Show stats" gates a nested set of stat checkboxes (K/D, AVG, AIM, WIN %),
-// capped at STAT_MAX selections. config.stats is kept in STAT_KEYS order.
+// ---- Stats picker (pill row) ---------------------------------------------
 function syncStatsUi() {
   const on = currentConfig.showStats;
-  const group = document.getElementById("stats-group")!;
-  group.classList.toggle("disabled", !on);
+  const row = document.getElementById("stats-pills")!;
+  row.classList.toggle("disabled", !on);
 
   const atMax = currentConfig.stats.length >= STAT_MAX;
-  for (const key of STAT_KEYS) {
-    const el = document.getElementById(`stat-${key}`) as HTMLInputElement;
-    const checked = currentConfig.stats.includes(key);
-    el.checked = checked;
+  for (const btn of row.querySelectorAll<HTMLButtonElement>(".pill")) {
+    const key = btn.dataset.stat as StatKey;
+    const selected = currentConfig.stats.includes(key);
+    btn.classList.toggle("selected", selected);
     // Disable when the block is off, or when the cap is hit and this one isn't
     // already selected (so you must deselect before picking another).
-    el.disabled = !on || (atMax && !checked);
+    btn.disabled = !on || (atMax && !selected);
   }
 }
 
@@ -228,26 +264,68 @@ function bindStats() {
     updateGeneratedUrl();
   });
 
-  for (const key of STAT_KEYS) {
-    const el = document.getElementById(`stat-${key}`) as HTMLInputElement;
-    el.addEventListener("change", () => {
-      if (el.checked) {
-        if (currentConfig.stats.length >= STAT_MAX) {
-          el.checked = false; // guard against races; cap is enforced
-          return;
-        }
-        // Insert keeping STAT_KEYS order.
-        currentConfig.stats = STAT_KEYS.filter(
-          (k) => currentConfig.stats.includes(k) || k === key,
-        );
-      } else {
-        currentConfig.stats = currentConfig.stats.filter((k) => k !== key);
-      }
-      syncStatsUi();
-      renderPreview();
-      updateGeneratedUrl();
-    });
+  const row = document.getElementById("stats-pills")!;
+  row.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(".pill");
+    if (!btn || btn.disabled) return;
+    const key = btn.dataset.stat as StatKey;
+    if (currentConfig.stats.includes(key)) {
+      currentConfig.stats = currentConfig.stats.filter((k) => k !== key);
+    } else {
+      if (currentConfig.stats.length >= STAT_MAX) return; // cap enforced
+      // Insert keeping STAT_KEYS order.
+      currentConfig.stats = STAT_KEYS.filter(
+        (k) => currentConfig.stats.includes(k) || k === key,
+      );
+    }
+    syncStatsUi();
+    renderPreview();
+    updateGeneratedUrl();
+  });
+}
+
+// ---- Win/Loss source toggle (Leetify vs Twitch session) -------------------
+function syncWlUi() {
+  const on = currentConfig.showWinLoss;
+  const row = document.getElementById("wl-mode")!;
+  row.classList.toggle("disabled", !on);
+  for (const seg of row.querySelectorAll<HTMLButtonElement>(".seg")) {
+    seg.classList.toggle("selected", seg.dataset.mode === wlMode);
+    seg.disabled = !on;
   }
+  const twitchField = document.getElementById("twitch-login") as HTMLInputElement;
+  twitchField.hidden = !(on && wlMode === "twitch");
+}
+
+function bindWl() {
+  const showWl = document.getElementById("show-wl") as HTMLInputElement;
+  showWl.checked = currentConfig.showWinLoss;
+  showWl.addEventListener("change", () => {
+    currentConfig.showWinLoss = showWl.checked;
+    syncWlUi();
+    renderPreview();
+    updateGeneratedUrl();
+  });
+
+  const row = document.getElementById("wl-mode")!;
+  row.addEventListener("click", (e) => {
+    const seg = (e.target as HTMLElement).closest<HTMLButtonElement>(".seg");
+    if (!seg || seg.disabled) return;
+    wlMode = seg.dataset.mode === "twitch" ? "twitch" : "leetify";
+    const twitchField = document.getElementById("twitch-login") as HTMLInputElement;
+    // Leetify mode drops the Twitch login entirely; Twitch mode adopts whatever
+    // is already typed in the (now visible) field.
+    currentConfig.twitchLogin =
+      wlMode === "twitch" ? normalizeTwitchLogin(twitchField.value) : "";
+    syncWlUi();
+    updateGeneratedUrl();
+  });
+
+  const twitchField = document.getElementById("twitch-login") as HTMLInputElement;
+  twitchField.addEventListener("input", () => {
+    currentConfig.twitchLogin = normalizeTwitchLogin(twitchField.value);
+    updateGeneratedUrl();
+  });
 }
 
 // ---- Font combobox -------------------------------------------------------
@@ -297,8 +375,20 @@ function bindFont() {
     e.preventDefault();
     const font = (item as HTMLElement).dataset.font!;
     currentConfig.font = font;
-    loadFont(font);
+    loadFont(font, currentConfig.fontWeight);
     close();
+    renderPreview();
+    updateGeneratedUrl();
+  });
+}
+
+// ---- Font weight select --------------------------------------------------
+function bindWeight() {
+  const sel = document.getElementById("font-weight") as HTMLSelectElement;
+  sel.value = String(currentConfig.fontWeight);
+  sel.addEventListener("change", () => {
+    currentConfig.fontWeight = parseInt(sel.value, 10);
+    loadFont(currentConfig.font, currentConfig.fontWeight);
     renderPreview();
     updateGeneratedUrl();
   });
@@ -309,7 +399,6 @@ function bindBackground() {
   const color = document.getElementById("bg-color") as HTMLInputElement;
   const hex = document.getElementById("bg-hex") as HTMLInputElement;
   const opacity = document.getElementById("bg-opacity") as HTMLInputElement;
-  const opacityVal = document.getElementById("bg-opacity-val")!;
 
   const applyColor = (value: string) => {
     currentConfig.bgColor = value;
@@ -328,46 +417,53 @@ function bindBackground() {
     }
   });
 
+  // Opacity reads as "100%" but accepts a raw number while typing.
+  opacity.addEventListener("focus", () => {
+    opacity.value = String(currentConfig.bgOpacity);
+  });
   opacity.addEventListener("input", () => {
-    currentConfig.bgOpacity = parseInt(opacity.value, 10);
-    opacityVal.textContent = `${currentConfig.bgOpacity}%`;
+    const digits = opacity.value.replace(/[^\d]/g, "");
+    currentConfig.bgOpacity = Math.max(0, Math.min(100, parseInt(digits || "0", 10)));
     renderPreview();
     updateGeneratedUrl();
   });
+  opacity.addEventListener("blur", () => {
+    opacity.value = `${currentConfig.bgOpacity}%`;
+  });
 }
 
-// Pushes currentConfig into every control (used on init and Restore defaults).
+// Pushes currentConfig into every control (used on init).
 function syncControlsFromConfig() {
   for (const [id, key] of Object.entries(checkboxMap)) {
     (document.getElementById(id) as HTMLInputElement).checked = currentConfig[
       key
     ] as boolean;
   }
-  (document.getElementById("twitch-login") as HTMLInputElement).value =
-    currentConfig.twitchLogin;
 
   (document.getElementById("show-stats") as HTMLInputElement).checked =
     currentConfig.showStats;
   syncStatsUi();
 
-  (document.getElementById("match-count") as HTMLSelectElement).value = String(
-    currentConfig.matchCount,
-  );
-  (document.getElementById("refresh-interval") as HTMLSelectElement).value =
-    String(currentConfig.refreshInterval);
+  (document.getElementById("show-wl") as HTMLInputElement).checked =
+    currentConfig.showWinLoss;
+  wlMode = currentConfig.twitchLogin ? "twitch" : "leetify";
+  (document.getElementById("twitch-login") as HTMLInputElement).value =
+    currentConfig.twitchLogin;
+  syncWlUi();
 
   const search = document.getElementById("font-search") as HTMLInputElement;
   search.value = currentConfig.font;
   search.style.fontFamily = fontStack(currentConfig.font);
-  loadFont(currentConfig.font);
+  loadFont(currentConfig.font, currentConfig.fontWeight);
+  (document.getElementById("font-weight") as HTMLSelectElement).value = String(
+    currentConfig.fontWeight,
+  );
 
   (document.getElementById("bg-color") as HTMLInputElement).value =
     currentConfig.bgColor;
   (document.getElementById("bg-hex") as HTMLInputElement).value =
     currentConfig.bgColor;
-  const opacity = document.getElementById("bg-opacity") as HTMLInputElement;
-  opacity.value = String(currentConfig.bgOpacity);
-  document.getElementById("bg-opacity-val")!.textContent =
+  (document.getElementById("bg-opacity") as HTMLInputElement).value =
     `${currentConfig.bgOpacity}%`;
 }
 
@@ -381,14 +477,6 @@ function bindControls() {
     debouncedLoadPreview(steamInput.value);
   });
 
-  const twitchInput = document.getElementById("twitch-login") as HTMLInputElement;
-  twitchInput.addEventListener("input", () => {
-    // Accepts a bare login, a twitch.tv/<name> link, or an @handle; the URL only
-    // carries the normalized login (empty when it isn't a valid channel name).
-    currentConfig.twitchLogin = normalizeTwitchLogin(twitchInput.value);
-    updateGeneratedUrl();
-  });
-
   for (const [id, key] of Object.entries(checkboxMap)) {
     const el = document.getElementById(id) as HTMLInputElement;
     el.checked = currentConfig[key] as boolean;
@@ -400,33 +488,10 @@ function bindControls() {
   }
 
   bindStats();
+  bindWl();
   bindFont();
+  bindWeight();
   bindBackground();
-
-  const matchCountEl = document.getElementById(
-    "match-count",
-  ) as HTMLSelectElement;
-  matchCountEl.value = String(currentConfig.matchCount);
-  matchCountEl.addEventListener("change", () => {
-    currentConfig.matchCount = parseInt(matchCountEl.value, 10);
-    renderPreview();
-    updateGeneratedUrl();
-  });
-
-  const refreshEl = document.getElementById(
-    "refresh-interval",
-  ) as HTMLSelectElement;
-  refreshEl.value = String(currentConfig.refreshInterval);
-  refreshEl.addEventListener("change", () => {
-    currentConfig.refreshInterval = parseInt(refreshEl.value, 10);
-    updateGeneratedUrl();
-  });
-
-  const mapEl = document.getElementById("preview-map") as HTMLSelectElement;
-  mapEl.addEventListener("change", () => {
-    const previewArea = document.getElementById("preview-widget")!;
-    previewArea.style.backgroundImage = `url('https://leetify.com/assets/images/maps/${mapEl.value}.jpg')`;
-  });
 
   document.getElementById("copy-url")!.addEventListener("click", () => {
     const urlEl = document.getElementById("generated-url") as HTMLInputElement;
@@ -434,188 +499,159 @@ function bindControls() {
       navigator.clipboard.writeText(urlEl.value);
       trackEvent("widget_url_copied", { steamId: currentConfig.steamId });
       const btn = document.getElementById("copy-url")!;
-      btn.textContent = "Copied!";
-      setTimeout(() => (btn.textContent = "Copy"), 1500);
+      btn.classList.add("copied");
+      setTimeout(() => btn.classList.remove("copied"), 1500);
     }
   });
-
-  // ---- Export / "Add to your stream" ------------------------------------
-  // Briefly swaps a button's label to give click feedback, then restores it.
-  const flashButton = (btn: HTMLElement, text: string) => {
-    const original = btn.textContent;
-    btn.textContent = text;
-    setTimeout(() => (btn.textContent = original), 1600);
-  };
 
   const zipBtn = document.getElementById("export-zip")!;
   zipBtn.addEventListener("click", () => {
     if (!currentConfig.steamId) return;
     downloadOverlayZip(currentConfig, getWidgetUrl());
     trackEvent("export_zip_downloaded", { steamId: currentConfig.steamId });
-    flashButton(zipBtn, "Downloaded ✓");
-  });
-
-  document.getElementById("reset-btn")!.addEventListener("click", () => {
-    const { steamId, twitchLogin } = currentConfig;
-    currentConfig = {
-      ...DEFAULT_CONFIG,
-      stats: [...DEFAULT_CONFIG.stats],
-      steamId,
-      twitchLogin,
-    };
-    syncControlsFromConfig();
-    renderPreview();
-    updateGeneratedUrl();
+    const label = zipBtn.querySelector(".zip-label");
+    if (label) {
+      const original = label.textContent;
+      label.textContent = "DOWNLOADED ✓";
+      setTimeout(() => (label.textContent = original), 1600);
+    }
   });
 }
 
-function statRowsHtml(): string {
-  return STAT_KEYS.map(
+function statPillsHtml(): string {
+  return STAT_PILL_ORDER.map(
     (key) =>
-      `<label class="checkbox-row stat-option"><input type="checkbox" id="stat-${key}"><span>${STAT_LABELS[key]}</span></label>`,
+      `<button type="button" class="pill" data-stat="${key}">${STAT_LABELS[key]}</button>`,
+  ).join("");
+}
+
+function weightOptionsHtml(): string {
+  return FONT_WEIGHTS.map(
+    (w) => `<option value="${w.value}">${w.label}</option>`,
   ).join("");
 }
 
 function init() {
   const app = document.getElementById("app")!;
   app.innerHTML = `
-    <div class="customizer">
-      <header class="header">
-        <div class="header-left">
-          <h1 class="title">CS2 Stats Overlay</h1>
-          <p class="subtitle">OBS browser source widget for your CS2 Premier stats</p>
-        </div>
-        <a class="header-link" href="https://leetify.com" target="_blank" rel="noopener">Powered by Leetify</a>
-      </header>
-
-      <div class="layout">
-        <div class="panel settings-panel">
-          <h2 class="panel-title">Settings</h2>
-
-          <div class="field">
-            <label class="field-label" for="steam-id">Steam ID</label>
-            <input type="text" id="steam-id" class="input" placeholder="Steam64 ID, profile link, or vanity name (e.g. kapahiii)">
-            <span class="field-hint">Paste your profile URL, a Steam64 ID, or just your custom URL name.</span>
+    <div class="shell">
+      <aside class="setup">
+        <div class="setup-head">
+          <div class="brand-block">
+            <h1 class="setup-title">CS2 Overlay Widget</h1>
+            <p class="setup-sub">Customize and use your own overlay widget for CS2. Enter your Twitch username to have a live W/L.</p>
           </div>
-
-          <div class="field">
-            <label class="field-label" for="twitch-login">Twitch username <span class="field-optional">(optional)</span></label>
-            <input type="text" id="twitch-login" class="input" placeholder="your channel name" autocomplete="off" spellcheck="false">
-            <span class="field-hint">When set, win/loss resets each time you go live and freezes (keeping the last stream's record) when you go offline. Needs the Twitch proxy Worker deployed — see the README.</span>
+          <div class="link-row">
+            <a class="link-chip link-repo" href="${REPO_URL}" target="_blank" rel="noopener">${ICON_GITHUB}<span>cs2-stats-overlay</span></a>
+            <a class="link-chip link-bmc" href="${BMC_URL}" target="_blank" rel="noopener" aria-label="Buy me a coffee">${ICON_BMC}</a>
+            <a class="link-chip link-twitch" href="${TWITCH_URL}" target="_blank" rel="noopener" aria-label="Twitch">${ICON_TWITCH}</a>
           </div>
-
-          <div class="field">
-            <label class="field-label" for="match-count">Recent matches for data</label>
-            <select id="match-count" class="input">
-              <option value="5">5</option>
-              <option value="10" selected>10</option>
-            </select>
-            <span class="field-hint">How many games we'll use to compute the stats (not including win/loss).</span>
-          </div>
-
-          <div class="section">
-            <h3 class="section-title">Data displayed</h3>
-            <label class="checkbox-row"><input type="checkbox" id="show-avatar" checked><span>Show avatar</span></label>
-            <label class="checkbox-row"><input type="checkbox" id="show-name" checked><span>Show player name</span></label>
-            <label class="checkbox-row"><input type="checkbox" id="show-change" checked><span>Show rank change</span></label>
-            <label class="checkbox-row"><input type="checkbox" id="show-wl" checked><span>Show win/loss</span></label>
-
-            <label class="checkbox-row"><input type="checkbox" id="show-stats" checked><span>Show stats</span></label>
-            <div class="sub-options" id="stats-group">
-              <span class="sub-hint">Pick up to ${STAT_MAX}</span>
-              ${statRowsHtml()}
-            </div>
-
-            <label class="checkbox-row"><input type="checkbox" id="show-history"><span>Show match history</span></label>
-          </div>
-
-          <div class="section">
-            <h3 class="section-title">Design</h3>
-            <label class="checkbox-row"><input type="checkbox" id="show-badge"><span>Show in-game badge instead</span></label>
-
-            <div class="field" style="margin-top: 12px;">
-              <label class="field-label" for="font-search">Font</label>
-              <div class="combo">
-                <input type="text" id="font-search" class="input" placeholder="Search Google Fonts…" autocomplete="off" spellcheck="false">
-                <div class="combo-list" id="font-list" hidden></div>
-              </div>
-            </div>
-
-            <div class="field">
-              <label class="field-label">Background</label>
-              <div class="bg-row">
-                <input type="color" id="bg-color" class="color-swatch" value="#242424" aria-label="Background color">
-                <input type="text" id="bg-hex" class="input bg-hex" value="#242424" spellcheck="false" aria-label="Background hex">
-              </div>
-              <span class="field-hint">Click the swatch to pick a color.</span>
-            </div>
-
-            <div class="field">
-              <label class="field-label" for="bg-opacity">Opacity <span id="bg-opacity-val">100%</span></label>
-              <input type="range" id="bg-opacity" class="range" min="0" max="100" value="100">
-            </div>
-          </div>
-
-          <div class="field">
-            <label class="field-label" for="refresh-interval">Refresh interval</label>
-            <select id="refresh-interval" class="input">
-              <option value="30">30 seconds</option>
-              <option value="60" selected>1 minute</option>
-              <option value="180">3 minutes</option>
-              <option value="300">5 minutes</option>
-            </select>
-            <span class="field-hint">Leetify takes a few minutes to sync a finished match, so faster than ~30s rarely shows results sooner — it mainly uses more of your API rate limit.</span>
-          </div>
-
-          <button class="btn btn-secondary" id="reset-btn">Restore defaults</button>
         </div>
 
-        <div class="panel preview-panel">
-          <h2 class="panel-title">Widget Preview</h2>
-          <div id="preview-widget" class="preview-area"></div>
+        <div class="setup-body">
+          <section class="group">
+            <h2 class="group-label">STEAM</h2>
+            <input type="text" id="steam-id" class="field-input" placeholder="Steam64 ID, profile link, or vanity name" autocomplete="off" spellcheck="false">
+          </section>
 
-          <div class="field" style="margin-top: 16px;">
-            <select id="preview-map" class="input">
-              <option value="de_anubis">Anubis</option>
-              <option value="de_ancient">Ancient</option>
-              <option value="de_dust2">Dust 2</option>
-              <option value="de_inferno">Inferno</option>
-              <option value="de_mirage">Mirage</option>
-              <option value="de_nuke">Nuke</option>
-              <option value="de_overpass">Overpass</option>
-              <option value="de_train">Train</option>
-              <option value="de_vertigo">Vertigo</option>
-            </select>
-          </div>
+          <section class="group">
+            <h2 class="group-label">DATA</h2>
+            <div class="stack">
+              <label class="check"><input type="checkbox" id="show-change"><span class="check-text">Rank Diff</span></label>
+              <label class="check"><input type="checkbox" id="show-history"><span class="check-text">Match History</span></label>
 
-          <div class="field" style="margin-top: 16px;">
-            <label class="field-label">Widget URL</label>
-            <div class="url-row">
-              <input type="text" id="generated-url" class="input url-input" readonly placeholder="Enter a Steam ID to generate URL">
-              <button class="btn btn-primary" id="copy-url">Copy</button>
+              <div class="check-group">
+                <label class="check"><input type="checkbox" id="show-stats"><span class="check-text">Stats (${STAT_MAX} Max)</span></label>
+                <div class="pill-row" id="stats-pills">${statPillsHtml()}</div>
+              </div>
+
+              <div class="check-group">
+                <label class="check"><input type="checkbox" id="show-wl"><span class="check-text">Win Loss Record</span></label>
+                <div class="seg-row" id="wl-mode">
+                  <button type="button" class="seg" data-mode="leetify">LEETIFY</button>
+                  <button type="button" class="seg" data-mode="twitch">TWITCH LIVE</button>
+                </div>
+                <input type="text" id="twitch-login" class="field-input" placeholder="Twitch username" autocomplete="off" spellcheck="false" hidden>
+              </div>
             </div>
-            <span class="field-hint">Add this URL as a Browser Source in OBS (recommended size: 660×180)</span>
-          </div>
+          </section>
 
-          <div class="field">
-            <label class="field-label">Add to your stream</label>
-            <button class="btn btn-secondary export-btn" id="export-zip" disabled>Download Zip for StreamElements</button>
-            <span class="field-hint">A StreamElements <strong>Custom Widget</strong> bundle (HTML, CSS, JS, FIELDS, DATA) — paste each file into its tab and edit the same options right inside StreamElements. Prefer OBS/Streamlabs? Use the widget URL above as a Browser Source.</span>
+          <section class="group">
+            <h2 class="group-label">DESIGN</h2>
+            <div class="stack">
+              <label class="check"><input type="checkbox" id="show-name"><span class="check-text">Name</span></label>
+              <label class="check"><input type="checkbox" id="show-avatar"><span class="check-text">Avatar</span></label>
+              <label class="check"><input type="checkbox" id="show-badge"><span class="check-text">In-game Styled Badge</span></label>
+
+              <div class="dual">
+                <div class="field field-grow">
+                  <label class="field-label" for="font-search">Font</label>
+                  <div class="combo">
+                    <div class="combo-box">
+                      <input type="text" id="font-search" class="field-input combo-input" placeholder="Search Google Fonts…" autocomplete="off" spellcheck="false">
+                      <span class="combo-caret">${ICON_CARET}</span>
+                    </div>
+                    <div class="combo-list" id="font-list" hidden></div>
+                  </div>
+                </div>
+                <div class="field field-weight">
+                  <label class="field-label" for="font-weight">Weight</label>
+                  <select id="font-weight" class="field-input select">${weightOptionsHtml()}</select>
+                </div>
+              </div>
+
+              <div class="dual">
+                <div class="field field-grow">
+                  <label class="field-label" for="bg-hex">Background Color</label>
+                  <div class="color-row">
+                    <label class="swatch">
+                      <input type="color" id="bg-color" value="#242424" aria-label="Background color">
+                    </label>
+                    <input type="text" id="bg-hex" class="field-input hex" value="#242424" spellcheck="false" aria-label="Background hex">
+                  </div>
+                </div>
+                <div class="field field-opacity">
+                  <label class="field-label" for="bg-opacity">Opacity</label>
+                  <input type="text" id="bg-opacity" class="field-input opacity" value="100%" inputmode="numeric" aria-label="Background opacity percent">
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="setup-foot">
+          <img class="foot-logo" src="${brandLogoSrc}" alt="kapKit">
+          <span class="foot-tag">Made with ❤️ in Toronto</span>
+        </div>
+      </aside>
+
+      <div class="stage">
+        <div class="preview" id="preview">
+          <div class="preview-banner" id="preview-banner" hidden>${ICON_WARNING}<span id="preview-banner-text"></span></div>
+          <div class="preview-body" id="preview-widget"></div>
+        </div>
+
+        <div class="exportbar is-empty" id="exportbar">
+          <div class="export-url">
+            <label class="field-label" for="generated-url">OBS Browser Source URL</label>
+            <div class="url-box">
+              <input type="text" id="generated-url" class="url-input" readonly placeholder="Enter a Steam ID to generate the URL">
+              <button type="button" id="copy-url" class="icon-btn" aria-label="Copy URL">${ICON_COPY}</button>
+            </div>
+          </div>
+          <div class="export-zip">
+            <label class="field-label">Streamelements Widget</label>
+            <button type="button" id="export-zip" class="zip-btn" disabled>${ICON_DOWNLOAD}<span class="zip-label">DOWNLOAD ZIP</span></button>
           </div>
         </div>
       </div>
-
-      <footer class="footer">
-        <span>CS2 Stats Overlay</span>
-        <span>Data from <a href="https://leetify.com" target="_blank" rel="noopener">Leetify</a></span>
-      </footer>
     </div>
   `;
 
   bindControls();
   syncControlsFromConfig();
 
-  // Re-fit the preview when the responsive layout changes the panel width.
+  // Re-fit the preview when the responsive layout changes the panel size.
   window.addEventListener("resize", fitPreview);
 
   const params = new URLSearchParams(window.location.search);
@@ -623,7 +659,6 @@ function init() {
   if (idFromUrl) {
     const steamInput = document.getElementById("steam-id") as HTMLInputElement;
     steamInput.value = idFromUrl;
-    // Accepts a Steam64 ID or a profile link here too — resolveAndLoad handles both.
     resolveAndLoad(idFromUrl);
   } else {
     renderPreview();

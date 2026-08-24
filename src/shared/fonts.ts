@@ -110,6 +110,23 @@ export const GOOGLE_FONTS: string[] = [
   'Zilla Slab',
 ];
 
+// The selectable font weights shown next to the Font picker. Values are real
+// CSS font-weights; labels are the usual names. 700 (Bold) is the default so the
+// widget's original look is unchanged.
+export interface FontWeightOption {
+  value: number;
+  label: string;
+}
+export const FONT_WEIGHTS: FontWeightOption[] = [
+  { value: 300, label: 'Light' },
+  { value: 400, label: 'Regular' },
+  { value: 500, label: 'Medium' },
+  { value: 600, label: 'Semibold' },
+  { value: 700, label: 'Bold' },
+  { value: 800, label: 'Extrabold' },
+  { value: 900, label: 'Black' },
+];
+
 // Builds the CSS font-family stack for a chosen family, always falling back to
 // Inter and then a generic sans-serif so a not-yet-loaded font still renders.
 export function fontStack(family: string): string {
@@ -117,17 +134,29 @@ export function fontStack(family: string): string {
   return family === 'Inter' ? `${quoted}, sans-serif` : `${quoted}, 'Inter', sans-serif`;
 }
 
-// Injects (once) the Google Fonts <link> for a family so the chosen font is
-// actually available when the widget applies it. Inter is bundled via the base
-// CSS import, so it's skipped. Idempotent per family + document.
-export function loadFont(family: string, doc: Document = document): void {
-  if (!family || family === 'Inter') return;
-  const id = `gf-${family.replace(/\s+/g, '-').toLowerCase()}`;
+// Adds one Google Fonts <link> for a single (family, weight), idempotent per
+// family+weight+document. Each weight is its own request so that asking for a
+// weight a family doesn't publish only fails that one link — the base 400/700
+// the widget always needs keep loading regardless.
+function ensureWeightLink(family: string, weight: number, doc: Document): void {
+  const id = `gf-${family.replace(/\s+/g, '-').toLowerCase()}-${weight}`;
   if (doc.getElementById(id)) return;
   const link = doc.createElement('link');
   link.id = id;
   link.rel = 'stylesheet';
   const fam = family.trim().replace(/\s+/g, '+');
-  link.href = `https://fonts.googleapis.com/css2?family=${fam}:wght@400;700&display=swap`;
+  link.href = `https://fonts.googleapis.com/css2?family=${fam}:wght@${weight}&display=swap`;
   doc.head.appendChild(link);
+}
+
+// Injects (once) the Google Fonts <link>s for a family so the chosen font is
+// actually available when the widget applies it. Always loads the 400/700 the
+// widget relies on, plus the specific `weight` the user picked (when it's
+// something else). Inter is bundled across weights via the base CSS import, so
+// it's skipped.
+export function loadFont(family: string, weight?: number, doc: Document = document): void {
+  if (!family || family === 'Inter') return;
+  ensureWeightLink(family, 400, doc);
+  ensureWeightLink(family, 700, doc);
+  if (weight && weight !== 400 && weight !== 700) ensureWeightLink(family, weight, doc);
 }
