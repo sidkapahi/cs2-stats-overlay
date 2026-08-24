@@ -668,7 +668,7 @@ function init() {
             </div>
           </div>
           <div class="export-zip">
-            <label class="field-label">Streamelements Widget</label>
+            <label class="field-label">Custom Widget</label>
             <button type="button" id="export-zip" class="zip-btn" disabled><span class="se-logo">${ICON_STREAMELEMENTS}</span><span class="zip-label">DOWNLOAD ZIP</span></button>
           </div>
         </div>
