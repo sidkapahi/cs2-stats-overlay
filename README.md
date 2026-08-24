@@ -14,7 +14,7 @@ A free OBS / StreamElements overlay that shows your CS2 Premier rating, rank bad
 
 <br/>
 
-<a href="https://cs2widget.kapkit.ca/"><img src="assets/create-overlay-button.svg" alt="Create Your Overlay" height="54"></a>
+<a href="https://cs2widget.kapkit.ca/"><img src="assets/create-overlay-button.svg" alt="Use Overlay" height="54"></a>
 
 <sub>No account, no install — build your widget URL in the browser.</sub>
 
