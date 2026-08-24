@@ -250,7 +250,9 @@ const checkboxMap: Record<string, keyof WidgetConfig> = {
 function syncStatsUi() {
   const on = currentConfig.showStats;
   const row = document.getElementById("stats-pills")!;
-  row.classList.toggle("disabled", !on);
+  // Collapse the stat pills entirely when the block is off, rather than showing
+  // them dimmed — the sub-options only belong in the list when their parent is on.
+  row.hidden = !on;
 
   const atMax = currentConfig.stats.length >= STAT_MAX;
   for (const btn of row.querySelectorAll<HTMLButtonElement>(".pill")) {
@@ -297,7 +299,9 @@ function bindStats() {
 function syncWlUi() {
   const on = currentConfig.showWinLoss;
   const row = document.getElementById("wl-mode")!;
-  row.classList.toggle("disabled", !on);
+  // Hide the Leetify/Twitch source picker entirely when W/L is off — the sub-
+  // options only belong in the list when their parent is on.
+  row.hidden = !on;
   for (const seg of row.querySelectorAll<HTMLButtonElement>(".seg")) {
     seg.classList.toggle("selected", seg.dataset.mode === wlMode);
     seg.disabled = !on;
@@ -563,6 +567,8 @@ function init() {
             <input type="text" id="steam-id" class="field-input" placeholder="Steam64 ID, profile link, or vanity name" autocomplete="off" spellcheck="false">
           </section>
 
+          <div class="divider" role="separator"></div>
+
           <section class="group">
             <h2 class="group-label">DATA</h2>
             <div class="stack">
@@ -584,6 +590,8 @@ function init() {
               </div>
             </div>
           </section>
+
+          <div class="divider" role="separator"></div>
 
           <section class="group">
             <h2 class="group-label">DESIGN</h2>
