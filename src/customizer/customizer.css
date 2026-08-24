@@ -175,6 +175,17 @@ body {
   color: #ffffff;
 }
 
+/* Size the Buy Me a Coffee / Twitch marks by height so a swapped-in custom SVG
+   (icon or full wordmark, with or without its own width/height attrs) always
+   fits the chip. */
+.link-bmc svg,
+.link-twitch svg {
+  height: 18px;
+  width: auto;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
 /* ---- Body sections ------------------------------------------------------- */
 .setup-body {
   flex: 1;
@@ -646,6 +657,23 @@ select.field-input {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex-shrink: 0;
+}
+
+/* StreamElements mark shown alongside the "Streamelements Widget" label. */
+.export-zip .field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.se-logo {
+  display: inline-flex;
+}
+
+.se-logo svg {
+  height: 14px;
+  width: auto;
   flex-shrink: 0;
 }
 
