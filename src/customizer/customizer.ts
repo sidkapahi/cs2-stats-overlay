@@ -9,6 +9,12 @@ import { configToParams, normalizeTwitchLogin } from "../shared/config";
 import { downloadOverlayZip } from "../shared/export";
 import { FONT_WEIGHTS, GOOGLE_FONTS, fontStack, loadFont } from "../shared/fonts";
 import { renderMessage, renderWidget } from "../shared/render";
+import {
+  buyMeACoffeeLogo,
+  gitHubLogo,
+  streamElementsLogo,
+  twitchLogo,
+} from "../shared/socialLogos";
 import { parseSteamInput } from "../shared/steamId";
 import {
   DEFAULT_CONFIG,
@@ -27,9 +33,13 @@ const BMC_URL = "https://buymeacoffee.com/sidkapahi";
 const TWITCH_URL = "https://twitch.tv/kapowhi";
 
 // ---- Inline icons (self-contained; no expiring remote assets) -------------
-const ICON_GITHUB = `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>`;
-const ICON_BMC = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8z"/><path d="M16 9h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M8 2v2M11 2v2M14 2v2"/></svg>`;
-const ICON_TWITCH = `<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M2.149 0L.537 4.119V20.11h5.4V24h3.043l3.891-3.89h4.38L23.463 14V0H2.149zm19.164 13.119l-3.043 3.043h-5.4l-2.699 2.699v-2.699H5.4V2.163h15.913v10.956zM17.13 5.4h-2.163v6.492h2.163V5.4zm-5.4 0H9.567v6.492h2.163V5.4z"/></svg>`;
+// The GitHub, Buy Me a Coffee, Twitch, and StreamElements marks are loaded from
+// assets/logos/*.svg (see ../shared/socialLogos). Drop your own SVG into that
+// folder to swap any of them out — no code change needed.
+const ICON_GITHUB = gitHubLogo;
+const ICON_BMC = buyMeACoffeeLogo;
+const ICON_TWITCH = twitchLogo;
+const ICON_STREAMELEMENTS = streamElementsLogo;
 const ICON_CARET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
 const ICON_COPY = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`;
 const ICON_WARNING = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>`;
@@ -640,7 +650,7 @@ function init() {
             </div>
           </div>
           <div class="export-zip">
-            <label class="field-label">Streamelements Widget</label>
+            <label class="field-label"><span class="se-logo">${ICON_STREAMELEMENTS}</span>Streamelements Widget</label>
             <button type="button" id="export-zip" class="zip-btn" disabled>${ICON_DOWNLOAD}<span class="zip-label">DOWNLOAD ZIP</span></button>
           </div>
         </div>
