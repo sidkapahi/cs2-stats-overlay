@@ -30,7 +30,7 @@ Each `@font-face` in `src/customizer/customizer.css` lists `.woff2 → .woff →
 .ttf`, so the browser loads whichever you provide and ignores the rest.
 
 Vite copies everything under `public/` to the site root at build time, so these
-resolve at `/(cs2-stats-overlay)/fonts/stratum2-*-webfont.*` — matching those
+resolve at `/fonts/stratum2-*-webfont.*` — matching those
 `@font-face` rules. Until the files are present the sources 404 harmlessly and
 the UI falls back to **Inter**; the build never depends on the files existing.
 
