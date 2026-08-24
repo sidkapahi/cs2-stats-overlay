@@ -41,7 +41,10 @@ const ICON_BMC = buyMeACoffeeLogo;
 const ICON_TWITCH = twitchLogo;
 const ICON_STREAMELEMENTS = streamElementsLogo;
 const ICON_CARET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
-const ICON_COPY = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`;
+// Phosphor "Copy" and "Check" (bold weight) — the copy button crossfades from
+// one to the other when the URL is copied.
+const ICON_COPY = `<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216,28H88A12,12,0,0,0,76,40V76H40A12,12,0,0,0,28,88V216a12,12,0,0,0,12,12H168a12,12,0,0,0,12-12V180h36a12,12,0,0,0,12-12V40A12,12,0,0,0,216,28ZM156,204H52V100H156Zm48-48H180V88a12,12,0,0,0-12-12H100V52H204Z"/></svg>`;
+const ICON_CHECK = `<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,0,1,17-17L96,183.51,215.51,63.51a12,12,0,0,1,17,17Z"/></svg>`;
 const ICON_WARNING = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>`;
 
 // Prompt shown in the preview before a Steam ID resolves.
@@ -508,12 +511,24 @@ function bindControls() {
 
   document.getElementById("copy-url")!.addEventListener("click", () => {
     const urlEl = document.getElementById("generated-url") as HTMLInputElement;
-    if (urlEl.value) {
+    // Ignore repeat clicks while the "Link Copied!" confirmation is showing so
+    // we don't capture that placeholder as the URL to restore.
+    if (urlEl.value && urlEl.dataset.copiedRestore === undefined) {
       navigator.clipboard.writeText(urlEl.value);
       trackEvent("widget_url_copied", { steamId: currentConfig.steamId });
-      const btn = document.getElementById("copy-url")!;
-      btn.classList.add("copied");
-      setTimeout(() => btn.classList.remove("copied"), 1500);
+      const box = document.getElementById("copy-url")!.closest(".url-box")!;
+      box.classList.add("copied");
+      // Swap the icon to a check mark and the URL text to a confirmation, then
+      // restore both after a short beat.
+      urlEl.dataset.copiedRestore = urlEl.value;
+      urlEl.value = "Link Copied!";
+      setTimeout(() => {
+        box.classList.remove("copied");
+        if (urlEl.dataset.copiedRestore !== undefined) {
+          urlEl.value = urlEl.dataset.copiedRestore;
+          delete urlEl.dataset.copiedRestore;
+        }
+      }, 1500);
     }
   });
 
@@ -644,23 +659,23 @@ function init() {
       </aside>
 
       <div class="stage">
-        <div class="preview" id="preview">
-          <div class="preview-banner" id="preview-banner" hidden>${ICON_WARNING}<span id="preview-banner-text"></span></div>
-          <div class="preview-body" id="preview-widget"></div>
-        </div>
-
         <div class="exportbar is-empty" id="exportbar">
           <div class="export-url">
             <label class="field-label" for="generated-url">OBS Browser Source URL</label>
             <div class="url-box">
               <input type="text" id="generated-url" class="url-input" readonly placeholder="Enter a Steam ID to generate the URL">
-              <button type="button" id="copy-url" class="icon-btn" aria-label="Copy URL">${ICON_COPY}</button>
+              <button type="button" id="copy-url" class="icon-btn" aria-label="Copy URL"><span class="icon-copy">${ICON_COPY}</span><span class="icon-check">${ICON_CHECK}</span></button>
             </div>
           </div>
           <div class="export-zip">
             <label class="field-label">Streamelements Widget</label>
             <button type="button" id="export-zip" class="zip-btn" disabled><span class="se-logo">${ICON_STREAMELEMENTS}</span><span class="zip-label">DOWNLOAD ZIP</span></button>
           </div>
+        </div>
+
+        <div class="preview" id="preview">
+          <div class="preview-banner" id="preview-banner" hidden>${ICON_WARNING}<span id="preview-banner-text"></span></div>
+          <div class="preview-body" id="preview-widget"></div>
         </div>
       </div>
     </div>
