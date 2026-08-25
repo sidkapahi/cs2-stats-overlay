@@ -17,10 +17,15 @@ declare global {
 const UMAMI_WEBSITE_ID: string = import.meta.env.VITE_UMAMI_WEBSITE_ID ?? "";
 const UMAMI_SRC = "https://cloud.umami.is/script.js";
 
-// Load Umami's script only when an ID is configured, so nothing is fetched (and
-// no events are sent) unless the site owner has set VITE_UMAMI_WEBSITE_ID. Runs
-// once on import; safe to call again (it no-ops if the tag already exists).
-function loadUmami() {
+// Loads Umami's script — but only when an ID is configured, so nothing is
+// fetched (and no events are sent) unless the site owner has set
+// VITE_UMAMI_WEBSITE_ID. Each entry point calls this once.
+//
+// autoTrack defaults to true (the customizer wants automatic pageviews so it
+// gets visitor counts and referrers/UTM for free). The overlay passes
+// autoTrack=false: it loads in manual mode so it does NOT page-track streamers'
+// OBS sources — it only fires the one explicit twitch_session_started event.
+export function initAnalytics(options: { autoTrack?: boolean } = {}) {
   if (!UMAMI_WEBSITE_ID || typeof document === "undefined") return;
   if (document.querySelector("script[data-umami]")) return;
   const s = document.createElement("script");
@@ -28,10 +33,9 @@ function loadUmami() {
   s.src = UMAMI_SRC;
   s.dataset.websiteId = UMAMI_WEBSITE_ID;
   s.dataset.umami = "";
+  if (options.autoTrack === false) s.dataset.autoTrack = "false";
   document.head.appendChild(s);
 }
-
-loadUmami();
 
 export function trackEvent(
   event: string,

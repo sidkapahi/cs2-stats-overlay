@@ -1,3 +1,4 @@
+import { initAnalytics, trackEvent } from '../shared/analytics';
 import { fetchPremierData, type PremierData } from '../shared/api';
 import { paramsToConfig } from '../shared/config';
 import { loadFont } from '../shared/fonts';
@@ -45,6 +46,11 @@ async function init() {
   let sessionState: SessionState = sessionMode
     ? loadSession(config.steamId, config.twitchLogin)
     : { live: false, preSessionIds: [], results: {} };
+
+  // The overlay is otherwise never tracked. Only in Twitch session mode do we
+  // load Umami — in manual mode (no pageviews), purely to fire one
+  // twitch_session_started event per go-live so we can count live sessions.
+  if (sessionMode) initAnalytics({ autoTrack: false });
   // Latest stats payload and latest known live status, updated by two separate
   // pollers and reconciled by render().
   let lastData: PremierData | null = null;
@@ -57,7 +63,12 @@ async function init() {
     if (!lastData) return;
     let data = lastData;
     if (sessionMode) {
+      const wasLive = sessionState.live;
       sessionState = advanceSession(sessionState, lastLive, lastData.recentGames);
+      // A false→true flip is a fresh stream session starting; count it once.
+      // (An OBS source refresh reloads the persisted live=true state, so it
+      // won't re-fire — we count real go-live transitions, not refreshes.)
+      if (!wasLive && sessionState.live) trackEvent('twitch_session_started');
       saveSession(config.steamId, config.twitchLogin, sessionState);
       const wl = readWinLoss(sessionState);
       if (wl.mode === 'session') {

@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CS2 Stats Overlay</title>
-  <!-- No analytics on the overlay itself: it's embedded in OBS/streams and we
-       only track the customizer. (The previous fork's Plausible + Cloudflare
-       tags were removed here so no data flows to another account.) -->
+  <!-- No analytics tag here. The overlay is not page-tracked; the previous
+       fork's Plausible + Cloudflare tags were removed so no data flows to
+       another account. In Twitch session mode only, the widget loads Umami in
+       manual mode (see src/shared/analytics.ts) to fire a single
+       twitch_session_started event per go-live — no pageviews. -->
 </head>
 <body>
   <div id="app"></div>

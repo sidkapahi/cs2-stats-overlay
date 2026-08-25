@@ -199,7 +199,9 @@ Without it, the pills keep their normal rolling-window behaviour.
 
 The customizer reports anonymous usage to [Umami](https://umami.is) — how people
 find the site (referrers/UTM) and which **settings combinations** they build.
-The overlay page itself is never tracked. To collect this for your own site:
+The overlay is not page-tracked; its only event is a per-go-live session count,
+and only when Twitch mode is on (details below). To collect this for your own
+site:
 
 1. Create a free account at [cloud.umami.is](https://cloud.umami.is) and add
    your website (its domain).
@@ -209,11 +211,20 @@ The overlay page itself is never tracked. To collect this for your own site:
 
 That's it — Umami loads only when the ID is set. Custom events fired:
 
-| Event                  | When                          | Key properties                              |
-| ---------------------- | ----------------------------- | ------------------------------------------- |
-| `steam_id_entered`     | A Steam ID resolves           | —                                           |
-| `widget_url_copied`    | "Copy URL" clicked            | `combo`, `font`, `stats`, `showBadge`, …    |
-| `export_zip_downloaded`| "Export ZIP" clicked          | `combo`, `font`, `stats`, `showBadge`, …    |
+| Event                    | When                                    | Key properties                              | Page      |
+| ------------------------ | --------------------------------------- | ------------------------------------------- | --------- |
+| `steam_id_entered`       | A Steam ID resolves                     | — (count only)                              | Customizer|
+| `twitch_selected`        | A valid Twitch channel is adopted       | — (count only)                              | Customizer|
+| `widget_url_copied`      | "Copy URL" clicked                      | `combo`, `font`, `stats`, `showBadge`, …    | Customizer|
+| `export_zip_downloaded`  | "Export ZIP" clicked                    | `combo`, `font`, `stats`, `showBadge`, …    | Customizer|
+| `twitch_session_started` | The stream goes live (new W/L session)  | — (count only)                              | Overlay   |
+
+`twitch_selected` counts how many people turn on Twitch mode; the copy/export
+events also carry a `usesTwitch` property. `twitch_session_started` counts how
+many live sessions the overlay has tracked — it's the overlay's only event, it
+fires once per go-live (an OBS refresh doesn't re-count), and Umami loads there
+in manual mode so the overlay is never page-tracked. None of these send the
+Steam ID or Twitch channel — they're anonymous counts.
 
 To find the **most common setup**, open your Umami dashboard → the event →
 **Properties** → `combo`: each value is a whole configuration (e.g.

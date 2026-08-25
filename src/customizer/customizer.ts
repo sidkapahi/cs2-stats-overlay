@@ -1,4 +1,4 @@
-import { trackEvent } from "../shared/analytics";
+import { initAnalytics, trackEvent } from "../shared/analytics";
 import {
   fetchPremierData,
   resolveVanityUrl,
@@ -85,6 +85,9 @@ let previewError: string | null = null;
 let previewLoading = false;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let lastTrackedSteamId: string | null = null;
+// Last Twitch login we counted, so adopting a channel fires one adoption event
+// (not one per keystroke). The login itself is never sent — just the count.
+let lastTrackedTwitch = "";
 // Which source drives the W/L pills: 'leetify' = rolling window, 'twitch' =
 // per-stream session (reveals the Twitch username field). Mirrors whether a
 // Twitch login is set on the config.
@@ -248,7 +251,9 @@ async function loadPreview(token = ++resolveToken) {
     if (token !== resolveToken) return; // superseded by newer input
     previewData = data;
     if (currentConfig.steamId !== lastTrackedSteamId) {
-      trackEvent("steam_id_entered", { steamId: currentConfig.steamId });
+      // Just a funnel count — no Steam ID sent (we only want *that* someone got
+      // this far, not *who*).
+      trackEvent("steam_id_entered");
       lastTrackedSteamId = currentConfig.steamId;
     }
   } catch (e) {
@@ -340,6 +345,16 @@ function syncWlUi() {
   twitchField.hidden = !(on && wlMode === "twitch");
 }
 
+// Fires one `twitch_selected` event the first time a valid channel is adopted
+// (and again if it's changed to a different valid one). Counts adoption; the
+// channel name is deliberately not sent.
+function trackTwitchSelected(login: string) {
+  if (login && login !== lastTrackedTwitch) {
+    lastTrackedTwitch = login;
+    trackEvent("twitch_selected");
+  }
+}
+
 function bindWl() {
   const showWl = document.getElementById("show-wl") as HTMLInputElement;
   showWl.checked = currentConfig.showWinLoss;
@@ -360,6 +375,7 @@ function bindWl() {
     // is already typed in the (now visible) field.
     currentConfig.twitchLogin =
       wlMode === "twitch" ? normalizeTwitchLogin(twitchField.value) : "";
+    trackTwitchSelected(currentConfig.twitchLogin);
     syncWlUi();
     updateGeneratedUrl();
   });
@@ -367,6 +383,7 @@ function bindWl() {
   const twitchField = document.getElementById("twitch-login") as HTMLInputElement;
   twitchField.addEventListener("input", () => {
     currentConfig.twitchLogin = normalizeTwitchLogin(twitchField.value);
+    trackTwitchSelected(currentConfig.twitchLogin);
     updateGeneratedUrl();
   });
 }
@@ -587,6 +604,9 @@ function weightOptionsHtml(): string {
 }
 
 function init() {
+  // Customizer analytics: automatic pageviews on (visitor counts + referrers/UTM).
+  initAnalytics();
+
   const app = document.getElementById("app")!;
   app.innerHTML = `
     <div class="shell">
