@@ -623,25 +623,17 @@ function weightOptionsHtml(): string {
 }
 
 // Cookie consent banner + Privacy & Cookies modal. Analytics starts opted out
-// (see initAnalytics), so nothing is captured until the visitor accepts here.
-// The overlay is cookieless and shows none of this.
+// (see initAnalytics). The banner sits unobtrusively at the bottom of the
+// sidebar; interacting with the customizer counts as acceptance (implied
+// consent), so it never blocks anyone. The overlay is cookieless and shows none
+// of this.
 function mountConsentUi() {
   if (!analyticsEnabled()) return; // no analytics configured → nothing to consent to
 
+  // The modal is an overlay, so it lives on <body>.
   const root = document.createElement("div");
   root.className = "consent-root";
   root.innerHTML = `
-    <div class="cookie-banner" id="cookie-banner" hidden role="dialog" aria-live="polite" aria-label="Cookie consent">
-      <p class="cookie-text">
-        kapKit uses cookies for privacy-friendly analytics to see how the customizer is used and improve it.
-        <button type="button" class="cookie-learn" id="cookie-learn">What we collect</button>
-      </p>
-      <div class="cookie-actions">
-        <button type="button" class="cookie-btn cookie-reject" id="cookie-reject">Reject</button>
-        <button type="button" class="cookie-btn cookie-accept" id="cookie-accept">Accept</button>
-      </div>
-    </div>
-
     <div class="modal-overlay" id="privacy-overlay" hidden>
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
         <div class="modal-head">
@@ -682,6 +674,9 @@ function mountConsentUi() {
             <button type="button" class="cookie-btn cookie-accept" id="modal-accept">Accept</button>
           </div>
 
+          <h3>Questions?</h3>
+          <p>Reach out any time at <a class="modal-mail" href="mailto:hey@sidkapahi.com">hey@sidkapahi.com</a>.</p>
+
           <p class="modal-fine">Analytics is processed by PostHog on our behalf. This notice is provided in good faith and isn't legal advice.</p>
         </div>
       </div>
@@ -689,13 +684,29 @@ function mountConsentUi() {
   `;
   document.body.appendChild(root);
 
-  const banner = root.querySelector<HTMLElement>("#cookie-banner")!;
+  // The banner is a small card at the bottom of the sidebar.
+  const banner = document.createElement("div");
+  banner.className = "cookie-banner";
+  banner.hidden = true;
+  banner.setAttribute("role", "region");
+  banner.setAttribute("aria-label", "Cookie consent");
+  banner.innerHTML = `
+    <p class="cookie-text">
+      Privacy-friendly analytics help improve kapKit — using the customizer accepts cookies.
+      <button type="button" class="cookie-learn" id="cookie-learn">What we collect</button>
+    </p>
+    <div class="cookie-actions">
+      <button type="button" class="cookie-btn cookie-reject" id="cookie-reject">Reject</button>
+      <button type="button" class="cookie-btn cookie-accept" id="cookie-accept">Accept</button>
+    </div>
+  `;
+  document.querySelector(".setup-foot")?.insertAdjacentElement("afterend", banner);
+
   const overlay = root.querySelector<HTMLElement>("#privacy-overlay")!;
   const stateEl = root.querySelector<HTMLElement>("#consent-state")!;
 
-  const showBanner = (show: boolean) => {
-    banner.hidden = !show;
-  };
+  let settled = consentDecided();
+
   const refreshState = () => {
     stateEl.textContent = consentDecided()
       ? "Your current choice is saved — change it below."
@@ -709,22 +720,33 @@ function mountConsentUi() {
     overlay.hidden = true;
   };
 
-  const accept = () => {
-    grantConsent();
-    showBanner(false);
+  // Applies a choice, hides the banner, and stops listening for implied consent.
+  // `fromInteraction` only counts the first time (and only as accept); the modal
+  // buttons re-decide even after a choice is already settled.
+  function decide(accepted: boolean, fromInteraction = false) {
+    if (fromInteraction && settled) return;
+    settled = true;
+    if (accepted) grantConsent();
+    else revokeConsent();
+    banner.hidden = true;
+    document.removeEventListener("pointerdown", onInteract, true);
+    document.removeEventListener("keydown", onInteract, true);
     refreshState();
-  };
-  const reject = () => {
-    revokeConsent();
-    showBanner(false);
-    refreshState();
-  };
+  }
 
-  root.querySelector("#cookie-accept")!.addEventListener("click", accept);
-  root.querySelector("#cookie-reject")!.addEventListener("click", reject);
-  root.querySelector("#modal-accept")!.addEventListener("click", accept);
-  root.querySelector("#modal-reject")!.addEventListener("click", reject);
-  root.querySelector("#cookie-learn")!.addEventListener("click", openModal);
+  // Implied consent: interacting with the tool (not the banner or the modal)
+  // counts as acceptance, so the banner never gets in anyone's way.
+  function onInteract(e: Event) {
+    const t = e.target as Node | null;
+    if (!t || banner.contains(t) || overlay.contains(t)) return;
+    decide(true, true);
+  }
+
+  banner.querySelector("#cookie-accept")!.addEventListener("click", () => decide(true));
+  banner.querySelector("#cookie-reject")!.addEventListener("click", () => decide(false));
+  banner.querySelector("#cookie-learn")!.addEventListener("click", openModal);
+  root.querySelector("#modal-accept")!.addEventListener("click", () => decide(true));
+  root.querySelector("#modal-reject")!.addEventListener("click", () => decide(false));
   root.querySelector("#privacy-close")!.addEventListener("click", closeModal);
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closeModal();
@@ -734,8 +756,13 @@ function mountConsentUi() {
     if (e.key === "Escape") closeModal();
   });
 
-  // Show the banner only until the visitor has decided.
-  showBanner(!consentDecided());
+  // Show the banner and start listening for implied consent until a choice is
+  // made (nothing on return visits).
+  if (!consentDecided()) {
+    banner.hidden = false;
+    document.addEventListener("pointerdown", onInteract, true);
+    document.addEventListener("keydown", onInteract, true);
+  }
 }
 
 function init() {
