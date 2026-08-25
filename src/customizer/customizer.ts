@@ -356,12 +356,12 @@ function syncWlUi() {
 }
 
 // Fires one `twitch_selected` event the first time a valid channel is adopted
-// (and again if it's changed to a different valid one). Counts adoption; the
-// channel name is deliberately not sent.
+// (and again if it's changed to a different valid one), tagged with the channel
+// so you can see which channels use it. The login is a public Twitch handle.
 function trackTwitchSelected(login: string) {
   if (login && login !== lastTrackedTwitch) {
     lastTrackedTwitch = login;
-    trackEvent("twitch_selected");
+    trackEvent("twitch_selected", { channel: login });
   }
 }
 
@@ -649,7 +649,7 @@ function mountConsentUi() {
           <ul>
             <li>Pages viewed, and where you arrived from (referrer / UTM tags)</li>
             <li>That a Steam ID was entered — <strong>not the ID itself</strong></li>
-            <li>That Twitch mode was turned on — <strong>not the channel name</strong></li>
+            <li>The Twitch channel you enter (a public handle), if you use Twitch mode</li>
             <li>Which widget settings you build (fonts, stats, colors, and so on)</li>
             <li>When you copy the widget URL or export the ZIP</li>
             <li>Clicks on the GitHub, Ko-fi, and Twitch links</li>
@@ -658,7 +658,7 @@ function mountConsentUi() {
 
           <h3>What we do NOT collect</h3>
           <ul>
-            <li>Your Steam ID or Twitch channel are never attached to analytics</li>
+            <li>Your Steam ID is never attached to analytics</li>
             <li>No session recording, no keystrokes, no personal profiles</li>
             <li>We don't sell or share your data</li>
           </ul>

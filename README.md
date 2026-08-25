@@ -212,7 +212,7 @@ Nothing loads without a key. Custom events:
 | Event                    | When                                    | Key properties                              | Page      |
 | ------------------------ | --------------------------------------- | ------------------------------------------- | --------- |
 | `steam_id_entered`       | A Steam ID resolves                     | — (count only)                              | Customizer|
-| `twitch_selected`        | A valid Twitch channel is adopted       | — (count only)                              | Customizer|
+| `twitch_selected`        | A valid Twitch channel is adopted       | `channel` (the public handle)               | Customizer|
 | `social_click`           | A header link is clicked                | `target` (github/kofi/twitch)               | Customizer|
 | `preview_error`          | A preview fails to load                 | `stage` (resolve/stats), `reason`           | Customizer|
 | `widget_url_copied`      | "Copy URL" clicked                      | `combo`, `font`, `stats`, `showBadge`, …    | Customizer|
@@ -237,7 +237,7 @@ into a signal. `reason` is a coarse code — `api_5xx` / `api_rate_limited`
 bug), `vanity_not_found`, `resolver_error`, `other`. `overlay_error` fires once
 per outage episode, not per poll.
 
-No event sends the Steam ID or Twitch channel. To find the **most common setup**,
+No event sends the Steam ID. To find the **most common setup**,
 open PostHog → the event → break down by the `combo` property: each value is a
 whole configuration (e.g. `badge=1&history=1&stats=kd,avg,winpct`). PostHog
 captures `utm_*` params automatically, so any `?utm_source=…` link you share is
