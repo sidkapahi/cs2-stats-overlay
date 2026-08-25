@@ -33,6 +33,9 @@ jobs:
           # Worker from the avatar proxy — see worker/README.md). Also not a
           # secret, so a repository variable is the natural home.
           VITE_TWITCH_PROXY_URL: ${{ vars.VITE_TWITCH_PROXY_URL || secrets.VITE_TWITCH_PROXY_URL }}
+          # Umami Cloud website ID for customizer analytics — a public identifier,
+          # so a repository variable is the natural home (a secret works too).
+          VITE_UMAMI_WEBSITE_ID: ${{ vars.VITE_UMAMI_WEBSITE_ID || secrets.VITE_UMAMI_WEBSITE_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
