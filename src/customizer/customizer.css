@@ -812,40 +812,23 @@ select.field-input {
   color: var(--text);
 }
 
-/* ---- Cookie consent gate (blocking on first visit) ---------------------- */
-.cookie-gate {
-  position: fixed;
-  inset: 0;
-  z-index: 95;
+/* ---- Cookie consent banner (bottom of the sidebar) ---------------------- */
+.cookie-banner {
+  width: 100%;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-field);
 }
-.cookie-gate[hidden] {
+.cookie-banner[hidden] {
   display: none;
 }
-.cookie-scrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(2px);
-}
-.cookie-banner {
-  position: fixed;
-  left: 50%;
-  bottom: 16px;
-  transform: translateX(-50%);
-  z-index: 1;
-  width: min(680px, calc(100vw - 24px));
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-card);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
-}
 .cookie-text {
-  flex: 1;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.5;
   color: var(--text-dim);
 }
@@ -864,6 +847,7 @@ select.field-input {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  justify-content: flex-end;
 }
 .cookie-btn {
   cursor: pointer;
@@ -1000,13 +984,3 @@ select.field-input {
   color: var(--line);
 }
 
-@media (max-width: 560px) {
-  .cookie-banner {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-  .cookie-actions {
-    justify-content: flex-end;
-  }
-}
