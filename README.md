@@ -6,8 +6,6 @@
 
 A free OBS / StreamElements overlay that shows your CS2 Premier rating, rank badge, <br/> stats, and recent match history live on stream — powered by the Leetify API.
 
-**Free & open source** · No login, no install for streamers — just paste a URL
-
 [![license MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![built with TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/sidkapahi/cs2-stats-overlay/pulls)
@@ -15,8 +13,6 @@ A free OBS / StreamElements overlay that shows your CS2 Premier rating, rank bad
 <br/>
 
 <a href="https://cs2widget.kapkit.ca/"><img src="assets/create-overlay-button.svg" alt="Use Overlay" height="54"></a>
-
-<sub>No account, no install — build your widget URL in the browser.</sub>
 
 <br/><br/>
 
@@ -28,7 +24,7 @@ A free OBS / StreamElements overlay that shows your CS2 Premier rating, rank bad
 
 ## Overview
 
-CS2 Stats Overlay puts a clean, transparent stats card on your stream that stays
+CS2 Stats Overlay puts a clean stats card on your stream that stays
 up to date on its own. You point it at your Steam profile, pick what to show, and
 drop the generated URL into OBS, Streamlabs, or StreamElements. Stats come live
 from [Leetify](https://leetify.com) and refresh automatically — no software to
@@ -79,12 +75,12 @@ You'll need your CS2 stats flowing into Leetify:
 ### Create your overlay
 
 1. Open the **[customizer](https://cs2widget.kapkit.ca/)**
-2. Paste your **Steam profile link** or Steam64 ID
+2. Paste your **Steam profile link** or Steam64 ID (can be found on [SteamID I/O](https://steamid.io/))
 3. Toggle what to show — avatar, name, rank badge, rank change, stats, match history
 4. Set how many recent matches to show and how often it refreshes
 5. Copy the generated **widget URL** (or download the StreamElements bundle — see below)
 
-### Add it to OBS or Streamlabs
+### Add it to OBS/Streamlabs OBS
 
 1. Add a new **Browser Source**
 2. Paste your widget URL
