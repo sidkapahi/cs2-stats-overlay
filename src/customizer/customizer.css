@@ -855,8 +855,13 @@ select.field-input {
   display: none;
 }
 .cookie-logo {
+  /* align-self keeps the image at its natural aspect ratio: the banner is a
+     column flex, whose default align-items: stretch would otherwise pull the
+     logo to the full card width (distorting it, most visibly on mobile). */
+  align-self: flex-start;
   height: 26px;
   width: auto;
+  max-width: 100%;
   display: block;
 }
 .cookie-copy {
