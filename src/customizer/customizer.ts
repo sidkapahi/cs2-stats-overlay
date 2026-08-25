@@ -1,6 +1,7 @@
 import {
   analyticsEnabled,
   consentDecided,
+  consentStatus,
   grantConsent,
   initAnalytics,
   revokeConsent,
@@ -623,9 +624,10 @@ function weightOptionsHtml(): string {
 }
 
 // Cookie consent banner + Privacy & Cookies modal. Analytics starts opted out
-// (see initAnalytics). The banner is pinned to the bottom of the viewport;
-// interacting with the customizer counts as acceptance (implied consent), so it
-// never blocks anyone. The overlay is cookieless and shows none of this.
+// (see initAnalytics) and stays that way until the visitor explicitly clicks
+// Accept or Reject — nothing else counts as consent, so the banner remains
+// until they choose. The banner is pinned to the bottom of the viewport. The
+// overlay is cookieless and shows none of this.
 function mountConsentUi() {
   if (!analyticsEnabled()) return; // no analytics configured → nothing to consent to
 
@@ -691,7 +693,7 @@ function mountConsentUi() {
   banner.setAttribute("aria-label", "Cookie consent");
   banner.innerHTML = `
     <p class="cookie-text">
-      Privacy-friendly analytics help improve kapKit — using the customizer accepts cookies.
+      Privacy-friendly analytics help improve kapKit. Allow cookies?
       <button type="button" class="cookie-learn" id="cookie-learn">What we collect</button>
     </p>
     <div class="cookie-actions">
@@ -703,13 +705,25 @@ function mountConsentUi() {
 
   const overlay = root.querySelector<HTMLElement>("#privacy-overlay")!;
   const stateEl = root.querySelector<HTMLElement>("#consent-state")!;
+  const modalAccept = root.querySelector<HTMLElement>("#modal-accept")!;
+  const modalReject = root.querySelector<HTMLElement>("#modal-reject")!;
 
-  let settled = consentDecided();
-
+  // Reflect the saved choice: label it in the status line and mark the active
+  // button (aria-pressed + .is-active) so it's clear which option is selected.
   const refreshState = () => {
-    stateEl.textContent = consentDecided()
-      ? "Your current choice is saved — change it below."
-      : "No choice made yet.";
+    const status = consentStatus();
+    stateEl.textContent =
+      status === "granted"
+        ? "You've allowed analytics cookies."
+        : status === "denied"
+          ? "You've rejected analytics cookies."
+          : "No choice made yet.";
+    const accepted = status === "granted";
+    const rejected = status === "denied";
+    modalAccept.classList.toggle("is-active", accepted);
+    modalReject.classList.toggle("is-active", rejected);
+    modalAccept.setAttribute("aria-pressed", String(accepted));
+    modalReject.setAttribute("aria-pressed", String(rejected));
   };
   const openModal = () => {
     refreshState();
@@ -719,33 +733,21 @@ function mountConsentUi() {
     overlay.hidden = true;
   };
 
-  // Applies a choice, hides the banner, and stops listening for implied consent.
-  // `fromInteraction` only counts the first time (and only as accept); the modal
-  // buttons re-decide even after a choice is already settled.
-  function decide(accepted: boolean, fromInteraction = false) {
-    if (fromInteraction && settled) return;
-    settled = true;
+  // Applies a choice and hides the banner. The choice is only ever made by
+  // explicitly clicking Accept or Reject — nothing else counts as consent, so
+  // the banner stays until the visitor decides.
+  function decide(accepted: boolean) {
     if (accepted) grantConsent();
     else revokeConsent();
     banner.hidden = true;
-    document.removeEventListener("pointerdown", onInteract, true);
-    document.removeEventListener("keydown", onInteract, true);
     refreshState();
-  }
-
-  // Implied consent: interacting with the tool (not the banner or the modal)
-  // counts as acceptance, so the banner never gets in anyone's way.
-  function onInteract(e: Event) {
-    const t = e.target as Node | null;
-    if (!t || banner.contains(t) || overlay.contains(t)) return;
-    decide(true, true);
   }
 
   banner.querySelector("#cookie-accept")!.addEventListener("click", () => decide(true));
   banner.querySelector("#cookie-reject")!.addEventListener("click", () => decide(false));
   banner.querySelector("#cookie-learn")!.addEventListener("click", openModal);
-  root.querySelector("#modal-accept")!.addEventListener("click", () => decide(true));
-  root.querySelector("#modal-reject")!.addEventListener("click", () => decide(false));
+  modalAccept.addEventListener("click", () => decide(true));
+  modalReject.addEventListener("click", () => decide(false));
   root.querySelector("#privacy-close")!.addEventListener("click", closeModal);
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closeModal();
@@ -755,13 +757,8 @@ function mountConsentUi() {
     if (e.key === "Escape") closeModal();
   });
 
-  // Show the banner and start listening for implied consent until a choice is
-  // made (nothing on return visits).
-  if (!consentDecided()) {
-    banner.hidden = false;
-    document.addEventListener("pointerdown", onInteract, true);
-    document.addEventListener("keydown", onInteract, true);
-  }
+  // Show the banner until an explicit choice is made (nothing on return visits).
+  if (!consentDecided()) banner.hidden = false;
 }
 
 function init() {

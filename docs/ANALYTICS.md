@@ -4,8 +4,8 @@ Every "ping" this app sends to PostHog, and what it means. There are two
 surfaces:
 
 - **Customizer** — the web page at the root. Uses `posthog-js`, **cookie-based**,
-  and starts **opted out**: nothing is sent until the visitor consents (they
-  accept explicitly, or implicitly by interacting with the tool). Code:
+  and starts **opted out**: nothing is sent until the visitor explicitly clicks
+  **Accept** on the consent banner (or in the Privacy & Cookies modal). Code:
   [`src/shared/analytics.ts`](../src/shared/analytics.ts).
 - **Overlay** — the OBS browser source at `/widget/`. **Cookieless**: it POSTs a
   few anonymous events straight to PostHog with an in-memory random id, no

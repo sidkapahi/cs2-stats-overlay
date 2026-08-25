@@ -61,11 +61,17 @@ export function analyticsEnabled(): boolean {
 // always be true and the banner would never appear. get_explicit_consent_status
 // reads the *stored* choice only ("pending" until the visitor actually decides).
 export function consentDecided(): boolean {
-  if (!ENABLED || !started) return false;
+  return consentStatus() !== "pending";
+}
+
+// The visitor's stored choice: "granted" (accepted), "denied" (rejected), or
+// "pending" (no choice yet). Used to show which option is active in the modal.
+export function consentStatus(): "granted" | "denied" | "pending" {
+  if (!ENABLED || !started) return "pending";
   try {
-    return posthog.get_explicit_consent_status() !== "pending";
+    return posthog.get_explicit_consent_status();
   } catch {
-    return false;
+    return "pending";
   }
 }
 
