@@ -631,14 +631,17 @@ function mountConsentUi() {
   const root = document.createElement("div");
   root.className = "consent-root";
   root.innerHTML = `
-    <div class="cookie-banner" id="cookie-banner" hidden role="dialog" aria-live="polite" aria-label="Cookie consent">
-      <p class="cookie-text">
-        kapKit uses cookies for privacy-friendly analytics to see how the customizer is used and improve it.
-        <button type="button" class="cookie-learn" id="cookie-learn">What we collect</button>
-      </p>
-      <div class="cookie-actions">
-        <button type="button" class="cookie-btn cookie-reject" id="cookie-reject">Reject</button>
-        <button type="button" class="cookie-btn cookie-accept" id="cookie-accept">Accept</button>
+    <div class="cookie-gate" id="cookie-gate" hidden>
+      <div class="cookie-scrim"></div>
+      <div class="cookie-banner" role="dialog" aria-modal="true" aria-label="Cookie consent">
+        <p class="cookie-text">
+          kapKit uses cookies for privacy-friendly analytics to see how the customizer is used and improve it. Please choose to continue.
+          <button type="button" class="cookie-learn" id="cookie-learn">What we collect</button>
+        </p>
+        <div class="cookie-actions">
+          <button type="button" class="cookie-btn cookie-reject" id="cookie-reject">Reject</button>
+          <button type="button" class="cookie-btn cookie-accept" id="cookie-accept">Accept</button>
+        </div>
       </div>
     </div>
 
@@ -682,6 +685,9 @@ function mountConsentUi() {
             <button type="button" class="cookie-btn cookie-accept" id="modal-accept">Accept</button>
           </div>
 
+          <h3>Questions?</h3>
+          <p>Reach out any time at <a class="modal-mail" href="mailto:hey@sidkapahi.com">hey@sidkapahi.com</a>.</p>
+
           <p class="modal-fine">Analytics is processed by PostHog on our behalf. This notice is provided in good faith and isn't legal advice.</p>
         </div>
       </div>
@@ -689,12 +695,14 @@ function mountConsentUi() {
   `;
   document.body.appendChild(root);
 
-  const banner = root.querySelector<HTMLElement>("#cookie-banner")!;
+  const gate = root.querySelector<HTMLElement>("#cookie-gate")!;
   const overlay = root.querySelector<HTMLElement>("#privacy-overlay")!;
   const stateEl = root.querySelector<HTMLElement>("#consent-state")!;
 
+  // The gate is a blocking overlay on first visit — the customizer can't be
+  // used until Accept or Reject is chosen.
   const showBanner = (show: boolean) => {
-    banner.hidden = !show;
+    gate.hidden = !show;
   };
   const refreshState = () => {
     stateEl.textContent = consentDecided()

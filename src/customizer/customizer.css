@@ -812,13 +812,27 @@ select.field-input {
   color: var(--text);
 }
 
-/* ---- Cookie consent banner ---------------------------------------------- */
+/* ---- Cookie consent gate (blocking on first visit) ---------------------- */
+.cookie-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+}
+.cookie-gate[hidden] {
+  display: none;
+}
+.cookie-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
 .cookie-banner {
   position: fixed;
   left: 50%;
   bottom: 16px;
   transform: translateX(-50%);
-  z-index: 90;
+  z-index: 1;
   width: min(680px, calc(100vw - 24px));
   display: flex;
   align-items: center;
@@ -828,9 +842,6 @@ select.field-input {
   border: 1px solid var(--card-border);
   border-radius: var(--radius-card);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
-}
-.cookie-banner[hidden] {
-  display: none;
 }
 .cookie-text {
   flex: 1;
@@ -950,6 +961,14 @@ select.field-input {
 .modal-body strong {
   color: var(--text);
   font-weight: 700;
+}
+.modal-mail {
+  color: #2f7bff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.modal-mail:hover {
+  filter: brightness(1.15);
 }
 .modal-body ul {
   margin: 0 0 10px;
