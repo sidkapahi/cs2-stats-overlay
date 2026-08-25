@@ -10,8 +10,8 @@ import { downloadOverlayZip } from "../shared/export";
 import { FONT_WEIGHTS, GOOGLE_FONTS, fontStack, loadFont } from "../shared/fonts";
 import { renderMessage, renderWidget } from "../shared/render";
 import {
-  buyMeACoffeeLogo,
   gitHubLogo,
+  koFiLogo,
   streamElementsLogo,
   twitchLogo,
 } from "../shared/socialLogos";
@@ -29,15 +29,15 @@ import "./customizer.css";
 
 // External links for the header button row.
 const REPO_URL = "https://github.com/sidkapahi/cs2-stats-overlay";
-const BMC_URL = "https://buymeacoffee.com/sidkapahi";
+const KOFI_URL = "https://ko-fi.com/kapahi";
 const TWITCH_URL = "https://twitch.tv/kapowhi";
 
 // ---- Inline icons (self-contained; no expiring remote assets) -------------
-// The GitHub, Buy Me a Coffee, Twitch, and StreamElements marks are loaded from
+// The GitHub, Ko-fi, Twitch, and StreamElements marks are loaded from
 // assets/logos/*.svg (see ../shared/socialLogos). Drop your own SVG into that
 // folder to swap any of them out — no code change needed.
 const ICON_GITHUB = gitHubLogo;
-const ICON_BMC = buyMeACoffeeLogo;
+const ICON_KOFI = koFiLogo;
 const ICON_TWITCH = twitchLogo;
 const ICON_STREAMELEMENTS = streamElementsLogo;
 const ICON_CARET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
@@ -571,7 +571,7 @@ function init() {
           </div>
           <div class="link-row">
             <a class="link-chip link-repo" href="${REPO_URL}" target="_blank" rel="noopener">${ICON_GITHUB}<span>cs2-stats-overlay</span></a>
-            <a class="link-chip link-bmc" href="${BMC_URL}" target="_blank" rel="noopener" aria-label="Buy me a coffee">${ICON_BMC}</a>
+            <a class="link-chip link-kofi" href="${KOFI_URL}" target="_blank" rel="noopener" aria-label="Ko-fi">${ICON_KOFI}</a>
             <a class="link-chip link-twitch" href="${TWITCH_URL}" target="_blank" rel="noopener" aria-label="Twitch">${ICON_TWITCH}</a>
           </div>
         </div>
