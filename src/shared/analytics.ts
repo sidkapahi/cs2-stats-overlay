@@ -1,86 +1,84 @@
-declare global {
-  interface Window {
-    // Umami's tracking API, present once cloud.umami.is/script.js has loaded.
-    // Custom events take a name plus an optional flat bag of properties; Umami
-    // shows each property under the event's "Properties" breakdown.
-    umami?: {
-      track: (
-        event: string,
-        data?: Record<string, string | number | boolean>,
-      ) => void;
-    };
-  }
-}
+import posthog from "posthog-js";
+import type { PostHogConfig } from "posthog-js";
+
+// Customizer analytics (PostHog, cookie-based). The overlay does NOT use this
+// module — it uses the lightweight, cookieless analyticsOverlay.ts instead, so
+// posthog-js is never bundled into the OBS overlay.
 
 type Props = Record<string, string | number | boolean>;
 
-// Umami website ID, injected by Vite from the env var at build time. Empty when
-// unset — which is the case for forks and local dev without their own account.
-const UMAMI_WEBSITE_ID: string = import.meta.env.VITE_UMAMI_WEBSITE_ID ?? "";
-const UMAMI_SRC = "https://cloud.umami.is/script.js";
-const ENABLED = !!UMAMI_WEBSITE_ID;
+// PostHog project key + host, injected by Vite at build time. Empty key = no
+// analytics at all (forks / local dev without their own project).
+const POSTHOG_KEY: string = import.meta.env.VITE_POSTHOG_KEY ?? "";
+const POSTHOG_HOST: string =
+  import.meta.env.VITE_POSTHOG_HOST ?? "https://us.i.posthog.com";
+const ENABLED = !!POSTHOG_KEY;
 
-// Umami's script is deferred, so window.umami isn't ready the instant the page
-// loads. Events fired before then (e.g. overlay_active on load) are buffered
-// here and flushed once the tracker is available.
-const queue: Array<[string, Props | undefined]> = [];
+let started = false;
 
-function flush() {
-  if (!window.umami?.track) return;
-  for (const [event, props] of queue) {
-    try {
-      window.umami.track(event, props);
-    } catch {
-      // analytics must never break the app
-    }
-  }
-  queue.length = 0;
-}
+// Cookie-based, but starts OPTED OUT — nothing is captured until the visitor
+// accepts via the consent banner (see mountConsentUi in customizer.ts).
+export function initAnalytics() {
+  if (!ENABLED || started || typeof window === "undefined") return;
+  started = true;
 
-// Loads Umami's script — but only when an ID is configured, so nothing is
-// fetched (and no events are sent) unless the site owner has set
-// VITE_UMAMI_WEBSITE_ID. Each entry point calls this once.
-//
-// autoTrack defaults to true (the customizer wants automatic pageviews so it
-// gets visitor counts and referrers/UTM for free). The overlay passes
-// autoTrack=false: it loads in manual mode so it does NOT page-track streamers'
-// OBS sources — it only fires the explicit overlay_active / session / error
-// events below.
-export function initAnalytics(options: { autoTrack?: boolean } = {}) {
-  if (!ENABLED || typeof document === "undefined") return;
-  if (document.querySelector("script[data-umami]")) return;
-  const s = document.createElement("script");
-  s.defer = true;
-  s.src = UMAMI_SRC;
-  s.dataset.websiteId = UMAMI_WEBSITE_ID;
-  s.dataset.umami = "";
-  if (options.autoTrack === false) s.dataset.autoTrack = "false";
-  s.addEventListener("load", flush);
-  document.head.appendChild(s);
+  const config: Partial<PostHogConfig> = {
+    api_host: POSTHOG_HOST,
+    autocapture: false, // we send explicit, named events only
+    disable_session_recording: true,
+    advanced_disable_feature_flags: true,
+    // Never build person profiles for anonymous events — cheaper and more
+    // private; we only ever send anonymous counts.
+    person_profiles: "identified_only",
+    persistence: "localStorage+cookie",
+    opt_out_capturing_by_default: true, // gated on banner consent
+  };
+  posthog.init(POSTHOG_KEY, config);
 }
 
 export function trackEvent(event: string, props?: Props) {
-  if (!ENABLED) return;
-  queue.push([event, props]);
-  flush(); // sends immediately once Umami is ready; no-ops (stays queued) before
+  if (!ENABLED || !started) return;
+  try {
+    posthog.capture(event, props);
+  } catch {
+    // analytics must never break the app
+  }
 }
 
-// A stable, random, anonymous id for one browser/overlay so retention and
-// unique-overlay counts are possible. It is NOT derived from the Steam ID,
-// Twitch login, or anything personal — just a random token in localStorage.
-// (A persistent id like this is the one piece here a strict privacy/GDPR stance
-// might want behind consent; drop this and the `uid` prop to remove it.)
-export function anonId(): string {
-  const KEY = "cs2overlay:anon";
+// ---- Consent controls (cookie banner) ------------------------------------
+
+// Whether analytics is configured at all — the banner only shows when true.
+export function analyticsEnabled(): boolean {
+  return ENABLED;
+}
+
+// True once the visitor has explicitly accepted or rejected, so the banner
+// isn't shown again on return visits.
+export function consentDecided(): boolean {
+  if (!ENABLED || !started) return false;
   try {
-    let id = localStorage.getItem(KEY);
-    if (!id) {
-      id = crypto.randomUUID?.() ?? String(Math.random()).slice(2);
-      localStorage.setItem(KEY, id);
-    }
-    return id;
+    return (
+      posthog.has_opted_in_capturing() || posthog.has_opted_out_capturing()
+    );
   } catch {
-    // Storage unavailable (private mode, etc.) — skip the id rather than fail.
-    return "";
+    return false;
+  }
+}
+
+export function grantConsent() {
+  if (!ENABLED || !started) return;
+  try {
+    posthog.opt_in_capturing();
+  } catch {
+    /* ignore */
+  }
+}
+
+export function revokeConsent() {
+  if (!ENABLED || !started) return;
+  try {
+    posthog.opt_out_capturing();
+  } catch {
+    /* ignore */
   }
 }

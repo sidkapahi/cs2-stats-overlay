@@ -1,4 +1,4 @@
-import { anonId, initAnalytics, trackEvent } from '../shared/analytics';
+import { initOverlayAnalytics, trackOverlayEvent } from '../shared/analyticsOverlay';
 import { classifyFetchError, fetchPremierData, type PremierData } from '../shared/api';
 import { paramsToConfig } from '../shared/config';
 import { loadFont } from '../shared/fonts';
@@ -47,11 +47,12 @@ async function init() {
     ? loadSession(config.steamId, config.twitchLogin)
     : { live: false, preSessionIds: [], results: {} };
 
-  // Overlay analytics: manual mode only, so streamers' OBS sources are never
-  // page-tracked. One overlay_active per load powers DAU/retention (via the
-  // anonymous uid); go-live sessions and fetch errors are tracked below.
-  initAnalytics({ autoTrack: false });
-  trackEvent('overlay_active', { uid: anonId(), twitch: sessionMode });
+  // Overlay analytics: cookieless (no cookies, no storage, no consent banner on
+  // stream). One overlay_active per load counts active overlays; go-live
+  // sessions and fetch errors are tracked below. Cookieless means loads aren't
+  // linked across sessions, so these are counts, not unique-user figures.
+  initOverlayAnalytics();
+  trackOverlayEvent('overlay_active', { twitch: sessionMode });
   // Latest stats payload and latest known live status, updated by two separate
   // pollers and reconciled by render().
   let lastData: PremierData | null = null;
@@ -72,7 +73,7 @@ async function init() {
       // A false→true flip is a fresh stream session starting; count it once.
       // (An OBS source refresh reloads the persisted live=true state, so it
       // won't re-fire — we count real go-live transitions, not refreshes.)
-      if (!wasLive && sessionState.live) trackEvent('twitch_session_started');
+      if (!wasLive && sessionState.live) trackOverlayEvent('twitch_session_started');
       saveSession(config.steamId, config.twitchLogin, sessionState);
       const wl = readWinLoss(sessionState);
       if (wl.mode === 'session') {
@@ -90,7 +91,7 @@ async function init() {
     } catch (e) {
       // Fire once per outage episode (on the healthy→failing transition), so a
       // sustained outage doesn't emit an event on every refresh.
-      if (statsHealthy) trackEvent('overlay_error', { reason: classifyFetchError(e) });
+      if (statsHealthy) trackOverlayEvent('overlay_error', { reason: classifyFetchError(e) });
       statsHealthy = false;
       // Keep the last good render if we already have one; only show the error
       // state on the very first failure.

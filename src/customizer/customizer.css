@@ -794,3 +794,200 @@ select.field-input {
     width: 100%;
   }
 }
+
+/* ---- Footer privacy link ------------------------------------------------ */
+.foot-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+}
+.foot-link:hover {
+  color: var(--text);
+}
+
+/* ---- Cookie consent banner ---------------------------------------------- */
+.cookie-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 90;
+  width: min(680px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+.cookie-banner[hidden] {
+  display: none;
+}
+.cookie-text {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.cookie-learn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 4px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cookie-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.cookie-btn {
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: var(--radius-field);
+  border: 1px solid var(--card-border);
+  transition: filter 0.15s ease, background 0.15s ease;
+}
+.cookie-reject {
+  background: transparent;
+  color: var(--text-dim);
+}
+.cookie-reject:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+.cookie-accept {
+  background: #2f7bff;
+  border-color: #2f7bff;
+  color: #fff;
+}
+.cookie-accept:hover {
+  filter: brightness(1.08);
+}
+
+/* ---- Privacy / cookies modal -------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(2px);
+}
+.modal-overlay[hidden] {
+  display: none;
+}
+.modal-card {
+  width: min(560px, 100%);
+  max-height: min(80vh, 720px);
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--card-border);
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--text-dim);
+  padding: 0 4px;
+  transition: color 0.15s ease;
+}
+.modal-close:hover {
+  color: var(--text);
+}
+.modal-body {
+  overflow-y: auto;
+  padding: 18px 20px 22px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.modal-body h3 {
+  margin: 18px 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.modal-body p {
+  margin-bottom: 10px;
+}
+.modal-body strong {
+  color: var(--text);
+  font-weight: 700;
+}
+.modal-body ul {
+  margin: 0 0 10px;
+  padding-left: 20px;
+}
+.modal-body li {
+  margin-bottom: 4px;
+}
+.modal-updated {
+  font-size: 12px;
+  color: var(--line);
+}
+.modal-consent {
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 12px 0 18px;
+}
+.consent-state {
+  flex: 1;
+  min-width: 140px;
+  font-size: 12px;
+  color: var(--line);
+}
+.modal-fine {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--card-border);
+  font-size: 11.5px;
+  color: var(--line);
+}
+
+@media (max-width: 560px) {
+  .cookie-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .cookie-actions {
+    justify-content: flex-end;
+  }
+}

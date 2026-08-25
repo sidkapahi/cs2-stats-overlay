@@ -1,4 +1,11 @@
-import { initAnalytics, trackEvent } from "../shared/analytics";
+import {
+  analyticsEnabled,
+  consentDecided,
+  grantConsent,
+  initAnalytics,
+  revokeConsent,
+  trackEvent,
+} from "../shared/analytics";
 import {
   classifyFetchError,
   fetchPremierData,
@@ -60,7 +67,7 @@ const STAT_PILL_ORDER: StatKey[] = ["kd", "aim", "avg", "winpct"];
 let currentConfig: WidgetConfig = { ...DEFAULT_CONFIG, stats: [...DEFAULT_CONFIG.stats] };
 
 // Analytics properties describing the setup someone landed on. `combo` is the
-// whole configuration as one string, so Umami's Properties breakdown ranks the
+// whole configuration as one string, so a PostHog breakdown ranks the
 // most popular combinations directly; the individual fields let you slice a
 // single setting (e.g. how many people pick each font). No steamId here — the
 // question is which *settings* are popular, not who chose them.
@@ -615,8 +622,125 @@ function weightOptionsHtml(): string {
   ).join("");
 }
 
+// Cookie consent banner + Privacy & Cookies modal. Analytics starts opted out
+// (see initAnalytics), so nothing is captured until the visitor accepts here.
+// The overlay is cookieless and shows none of this.
+function mountConsentUi() {
+  if (!analyticsEnabled()) return; // no analytics configured → nothing to consent to
+
+  const root = document.createElement("div");
+  root.className = "consent-root";
+  root.innerHTML = `
+    <div class="cookie-banner" id="cookie-banner" hidden role="dialog" aria-live="polite" aria-label="Cookie consent">
+      <p class="cookie-text">
+        kapKit uses cookies for privacy-friendly analytics to see how the customizer is used and improve it.
+        <button type="button" class="cookie-learn" id="cookie-learn">What we collect</button>
+      </p>
+      <div class="cookie-actions">
+        <button type="button" class="cookie-btn cookie-reject" id="cookie-reject">Reject</button>
+        <button type="button" class="cookie-btn cookie-accept" id="cookie-accept">Accept</button>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="privacy-overlay" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
+        <div class="modal-head">
+          <h2 id="privacy-title" class="modal-title">Privacy &amp; Cookies</h2>
+          <button type="button" class="modal-close" id="privacy-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-updated">Last updated: 2026-08-25</p>
+          <p>kapKit's CS2 overlay customizer uses <strong>PostHog</strong>, a privacy-friendly analytics service, to understand how the tool is used so it can be improved. We keep this to a minimum and never sell your data.</p>
+
+          <h3>What we collect on the customizer</h3>
+          <p>Anonymous usage events only:</p>
+          <ul>
+            <li>Pages viewed, and where you arrived from (referrer / UTM tags)</li>
+            <li>That a Steam ID was entered — <strong>not the ID itself</strong></li>
+            <li>That Twitch mode was turned on — <strong>not the channel name</strong></li>
+            <li>Which widget settings you build (fonts, stats, colors, and so on)</li>
+            <li>When you copy the widget URL or export the ZIP</li>
+            <li>Clicks on the GitHub, Ko-fi, and Twitch links</li>
+            <li>Errors, so broken states can be found and fixed</li>
+          </ul>
+
+          <h3>What we do NOT collect</h3>
+          <ul>
+            <li>Your Steam ID or Twitch channel are never attached to analytics</li>
+            <li>No session recording, no keystrokes, no personal profiles</li>
+            <li>We don't sell or share your data</li>
+          </ul>
+
+          <h3>The overlay is cookieless</h3>
+          <p>The OBS overlay itself sets <strong>no cookies</strong> and stores nothing on your machine for analytics. It sends only anonymous counts (that it loaded, that a stream went live, and errors), so it needs no consent and shows no banner on stream.</p>
+
+          <h3>Cookies &amp; your choice</h3>
+          <p>On this customizer, analytics uses first-party cookies to recognise return visits. You choose whether to allow them — rejecting means no analytics cookies are set. You can change your mind any time right here:</p>
+          <div class="cookie-actions modal-consent">
+            <span class="consent-state" id="consent-state"></span>
+            <button type="button" class="cookie-btn cookie-reject" id="modal-reject">Reject</button>
+            <button type="button" class="cookie-btn cookie-accept" id="modal-accept">Accept</button>
+          </div>
+
+          <p class="modal-fine">Analytics is processed by PostHog on our behalf. This notice is provided in good faith and isn't legal advice.</p>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(root);
+
+  const banner = root.querySelector<HTMLElement>("#cookie-banner")!;
+  const overlay = root.querySelector<HTMLElement>("#privacy-overlay")!;
+  const stateEl = root.querySelector<HTMLElement>("#consent-state")!;
+
+  const showBanner = (show: boolean) => {
+    banner.hidden = !show;
+  };
+  const refreshState = () => {
+    stateEl.textContent = consentDecided()
+      ? "Your current choice is saved — change it below."
+      : "No choice made yet.";
+  };
+  const openModal = () => {
+    refreshState();
+    overlay.hidden = false;
+  };
+  const closeModal = () => {
+    overlay.hidden = true;
+  };
+
+  const accept = () => {
+    grantConsent();
+    showBanner(false);
+    refreshState();
+  };
+  const reject = () => {
+    revokeConsent();
+    showBanner(false);
+    refreshState();
+  };
+
+  root.querySelector("#cookie-accept")!.addEventListener("click", accept);
+  root.querySelector("#cookie-reject")!.addEventListener("click", reject);
+  root.querySelector("#modal-accept")!.addEventListener("click", accept);
+  root.querySelector("#modal-reject")!.addEventListener("click", reject);
+  root.querySelector("#cookie-learn")!.addEventListener("click", openModal);
+  root.querySelector("#privacy-close")!.addEventListener("click", closeModal);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeModal();
+  });
+  document.getElementById("open-privacy")?.addEventListener("click", openModal);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+
+  // Show the banner only until the visitor has decided.
+  showBanner(!consentDecided());
+}
+
 function init() {
-  // Customizer analytics: automatic pageviews on (visitor counts + referrers/UTM).
+  // Customizer analytics: cookie-based, but starts opted out — nothing is
+  // captured until the visitor accepts via the consent banner (mounted below).
   initAnalytics();
 
   const app = document.getElementById("app")!;
@@ -714,6 +838,7 @@ function init() {
         <div class="setup-foot">
           <img class="foot-logo" src="${brandLogoSrc}" alt="kapKit">
           <span class="foot-tag">Made with ❤️ in Toronto</span>
+          <button type="button" class="foot-link" id="open-privacy">Privacy &amp; Cookies</button>
         </div>
       </aside>
 
@@ -742,6 +867,7 @@ function init() {
 
   bindControls();
   syncControlsFromConfig();
+  mountConsentUi();
 
   // Re-fit the preview when the responsive layout changes the panel size.
   window.addEventListener("resize", fitPreview);
