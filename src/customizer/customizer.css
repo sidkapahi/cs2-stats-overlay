@@ -55,6 +55,10 @@
      sidebar's on-screen position/width (see .cookie-banner). */
   --app-pad: 24px;
   --setup-width: 336px;
+  /* Cap the overall layout on large desktop displays so the stage doesn't
+     stretch edge-to-edge on ultrawide monitors; the shell centers within the
+     padded #app area (see #app / .shell and the cookie-banner pinning). */
+  --shell-max: 1250px;
 }
 
 * {
@@ -84,11 +88,13 @@ body {
   min-height: 100vh;
   padding: var(--app-pad);
   display: flex;
+  justify-content: center;
 }
 
 /* ---- Overall shell: fixed setup column + flexible stage ------------------ */
 .shell {
   flex: 1;
+  max-width: var(--shell-max);
   display: flex;
   gap: 16px;
   min-height: 0;
@@ -838,7 +844,10 @@ select.field-input {
    sidebar, floating on top of its lower content) -------------------------- */
 .cookie-banner {
   position: fixed;
-  left: calc(var(--app-pad) + 8px);
+  /* Pin to the setup sidebar's left edge. Once the shell hits --shell-max and
+     centers on wide screens, the sidebar shifts inward by (100vw - shell-max)/2,
+     so track that instead of staying stuck to the viewport edge. */
+  left: max(calc(var(--app-pad) + 8px), calc((100vw - var(--shell-max)) / 2 + 8px));
   bottom: calc(var(--app-pad) + 8px + env(safe-area-inset-bottom, 0px));
   width: calc(var(--setup-width) - 16px);
   z-index: 90; /* under the privacy modal overlay (z-index: 100) */
