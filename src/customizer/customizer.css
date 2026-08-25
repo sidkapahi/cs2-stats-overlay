@@ -895,6 +895,26 @@ select.field-input {
   filter: brightness(1.08);
 }
 
+/* Selected choice in the Privacy & Cookies modal. The active button gets a
+   filled, ringed look; the other stays muted so the current choice is obvious. */
+.cookie-btn.is-active {
+  position: relative;
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 4px #2f7bff;
+}
+.cookie-reject.is-active {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border-color: #2f7bff;
+}
+.cookie-accept.is-active {
+  border-color: #2f7bff;
+}
+.cookie-btn.is-active::after {
+  content: "✓";
+  margin-left: 6px;
+  font-size: 12px;
+}
+
 /* ---- Privacy / cookies modal -------------------------------------------- */
 .modal-overlay {
   position: fixed;
