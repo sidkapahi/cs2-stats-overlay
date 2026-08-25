@@ -6,8 +6,12 @@
 type Props = Record<string, string | number | boolean>;
 
 const POSTHOG_KEY: string = import.meta.env.VITE_POSTHOG_KEY ?? "";
+// Use || (not ??) so an *empty* host falls back to the US default. CI passes an
+// empty string (not undefined) when VITE_POSTHOG_HOST is unset; with ?? that
+// would make the fetch below POST to a relative "/capture/" on our own origin
+// and silently drop every overlay event.
 const POSTHOG_HOST: string =
-  import.meta.env.VITE_POSTHOG_HOST ?? "https://us.i.posthog.com";
+  import.meta.env.VITE_POSTHOG_HOST || "https://us.i.posthog.com";
 const ENABLED = !!POSTHOG_KEY;
 
 // Random id, held in memory only and regenerated every load — cookieless by

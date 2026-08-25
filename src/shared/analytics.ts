@@ -10,8 +10,12 @@ type Props = Record<string, string | number | boolean>;
 // PostHog project key + host, injected by Vite at build time. Empty key = no
 // analytics at all (forks / local dev without their own project).
 const POSTHOG_KEY: string = import.meta.env.VITE_POSTHOG_KEY ?? "";
+// Use || (not ??) so an *empty* host falls back to the US default. CI passes
+// `VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}`, which is an empty string
+// (not undefined) when the variable is unset — with ?? that empty string would
+// stick and break ingestion.
 const POSTHOG_HOST: string =
-  import.meta.env.VITE_POSTHOG_HOST ?? "https://us.i.posthog.com";
+  import.meta.env.VITE_POSTHOG_HOST || "https://us.i.posthog.com";
 const ENABLED = !!POSTHOG_KEY;
 
 let started = false;
