@@ -50,6 +50,11 @@
   --text-dim: #a6a6a6;
   --radius-card: 16px;
   --radius-field: 8px;
+
+  /* Shared layout constants so the cookie banner can pin itself to the setup
+     sidebar's on-screen position/width (see .cookie-banner). */
+  --app-pad: 24px;
+  --setup-width: 336px;
 }
 
 * {
@@ -77,7 +82,7 @@ body {
 
 #app {
   min-height: 100vh;
-  padding: 24px;
+  padding: var(--app-pad);
   display: flex;
 }
 
@@ -92,7 +97,7 @@ body {
 
 /* ---- Setup column (fixed width) ----------------------------------------- */
 .setup {
-  width: 336px;
+  width: var(--setup-width);
   flex-shrink: 0;
   background: var(--card);
   border: 2px solid var(--card-border);
@@ -774,12 +779,21 @@ select.field-input {
 
 /* ---- Responsive: stack the setup column above the stage ----------------- */
 @media (max-width: 820px) {
-  #app {
-    padding: 16px;
+  :root {
+    --app-pad: 16px;
   }
 
   .shell {
     flex-direction: column;
+  }
+
+  /* The sidebar is full-width and stacked here, so drop the banner into a
+     bottom card that tracks the page padding instead of the 336px column. */
+  .cookie-banner {
+    left: var(--app-pad);
+    right: var(--app-pad);
+    width: auto;
+    max-width: 440px;
   }
 
   .setup {
@@ -820,44 +834,48 @@ select.field-input {
   color: var(--text);
 }
 
-/* ---- Cookie consent banner (pinned to the bottom of the viewport) -------- */
+/* ---- Cookie consent banner (a card pinned to the bottom of the setup
+   sidebar, floating on top of its lower content) -------------------------- */
 .cookie-banner {
   position: fixed;
-  left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
+  left: calc(var(--app-pad) + 8px);
+  bottom: calc(var(--app-pad) + 8px + env(safe-area-inset-bottom, 0px));
+  width: calc(var(--setup-width) - 16px);
   z-index: 90; /* under the privacy modal overlay (z-index: 100) */
-  width: min(640px, calc(100% - 24px));
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 16px;
-  padding: 14px 16px;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
   background: var(--card);
   border: 1px solid var(--card-border);
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-card);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
 }
 .cookie-banner[hidden] {
   display: none;
 }
+.cookie-logo {
+  height: 26px;
+  width: auto;
+  display: block;
+}
+.cookie-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cookie-title {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  color: var(--text);
+}
 .cookie-text {
-  flex: 1;
-  min-width: 200px;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--text-dim);
-}
-.cookie-learn {
-  background: none;
-  border: none;
-  padding: 0;
-  margin-left: 4px;
-  cursor: pointer;
-  font: inherit;
-  color: var(--text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 .cookie-actions {
   display: flex;
@@ -893,6 +911,21 @@ select.field-input {
 }
 .cookie-accept:hover {
   filter: brightness(1.08);
+}
+
+/* Banner-specific: the two choices share the bottom row as equal, uppercase
+   halves. Scoped to .cookie-banner so the Privacy & Cookies modal keeps its
+   own right-aligned Reject / Accept layout. */
+.cookie-banner .cookie-actions {
+  gap: 10px;
+  margin-left: 0;
+  margin-top: 2px;
+}
+.cookie-banner .cookie-btn {
+  flex: 1;
+  padding: 10px 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* Selected choice in the Privacy & Cookies modal. The active button gets a
