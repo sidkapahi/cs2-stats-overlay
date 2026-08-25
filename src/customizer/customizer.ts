@@ -1,11 +1,16 @@
-import { trackEvent } from "../shared/analytics";
+import { initAnalytics, trackEvent } from "../shared/analytics";
 import {
+  classifyFetchError,
   fetchPremierData,
   resolveVanityUrl,
   type PremierData,
 } from "../shared/api";
 import { brandLogoSrc } from "../shared/brandLogo";
-import { configToParams, normalizeTwitchLogin } from "../shared/config";
+import {
+  configToParams,
+  normalizeTwitchLogin,
+  settingsFingerprint,
+} from "../shared/config";
 import { downloadOverlayZip } from "../shared/export";
 import { FONT_WEIGHTS, GOOGLE_FONTS, fontStack, loadFont } from "../shared/fonts";
 import { renderMessage, renderWidget } from "../shared/render";
@@ -53,11 +58,37 @@ const PROMPT_TEXT = "ENTER YOUR STEAM NAME OR PROFILE LINK";
 const STAT_PILL_ORDER: StatKey[] = ["kd", "aim", "avg", "winpct"];
 
 let currentConfig: WidgetConfig = { ...DEFAULT_CONFIG, stats: [...DEFAULT_CONFIG.stats] };
+
+// Analytics properties describing the setup someone landed on. `combo` is the
+// whole configuration as one string, so Umami's Properties breakdown ranks the
+// most popular combinations directly; the individual fields let you slice a
+// single setting (e.g. how many people pick each font). No steamId here — the
+// question is which *settings* are popular, not who chose them.
+function configEventProps(
+  config: WidgetConfig,
+): Record<string, string | number | boolean> {
+  return {
+    combo: settingsFingerprint(config),
+    font: config.font,
+    fontWeight: config.fontWeight,
+    stats: config.showStats ? config.stats.join(",") : "off",
+    showBadge: config.showBadge,
+    showMatchHistory: config.showMatchHistory,
+    showWinLoss: config.showWinLoss,
+    showChange: config.showChange,
+    matchCount: config.matchCount,
+    bgOpacity: config.bgOpacity,
+    usesTwitch: Boolean(config.twitchLogin),
+  };
+}
 let previewData: PremierData | null = null;
 let previewError: string | null = null;
 let previewLoading = false;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let lastTrackedSteamId: string | null = null;
+// Last Twitch login we counted, so adopting a channel fires one adoption event
+// (not one per keystroke). The login itself is never sent — just the count.
+let lastTrackedTwitch = "";
 // Which source drives the W/L pills: 'leetify' = rolling window, 'twitch' =
 // per-stream session (reveals the Twitch username field). Mirrors whether a
 // Twitch login is set on the config.
@@ -185,6 +216,7 @@ async function resolveAndLoad(rawInput: string) {
       steamId = await resolveVanityUrl(parsed.vanity);
     } catch (e) {
       if (token !== resolveToken) return; // superseded by newer input
+      trackEvent("preview_error", { stage: "resolve", reason: classifyFetchError(e) });
       previewError = e instanceof Error ? e.message : "Failed to resolve";
       previewData = null;
       previewLoading = false;
@@ -221,11 +253,14 @@ async function loadPreview(token = ++resolveToken) {
     if (token !== resolveToken) return; // superseded by newer input
     previewData = data;
     if (currentConfig.steamId !== lastTrackedSteamId) {
-      trackEvent("steam_id_entered", { steamId: currentConfig.steamId });
+      // Just a funnel count — no Steam ID sent (we only want *that* someone got
+      // this far, not *who*).
+      trackEvent("steam_id_entered");
       lastTrackedSteamId = currentConfig.steamId;
     }
   } catch (e) {
     if (token !== resolveToken) return; // superseded by newer input
+    trackEvent("preview_error", { stage: "stats", reason: classifyFetchError(e) });
     previewError = e instanceof Error ? e.message : "Failed to load";
     previewData = null;
   }
@@ -313,6 +348,16 @@ function syncWlUi() {
   twitchField.hidden = !(on && wlMode === "twitch");
 }
 
+// Fires one `twitch_selected` event the first time a valid channel is adopted
+// (and again if it's changed to a different valid one). Counts adoption; the
+// channel name is deliberately not sent.
+function trackTwitchSelected(login: string) {
+  if (login && login !== lastTrackedTwitch) {
+    lastTrackedTwitch = login;
+    trackEvent("twitch_selected");
+  }
+}
+
 function bindWl() {
   const showWl = document.getElementById("show-wl") as HTMLInputElement;
   showWl.checked = currentConfig.showWinLoss;
@@ -333,6 +378,7 @@ function bindWl() {
     // is already typed in the (now visible) field.
     currentConfig.twitchLogin =
       wlMode === "twitch" ? normalizeTwitchLogin(twitchField.value) : "";
+    trackTwitchSelected(currentConfig.twitchLogin);
     syncWlUi();
     updateGeneratedUrl();
   });
@@ -340,6 +386,7 @@ function bindWl() {
   const twitchField = document.getElementById("twitch-login") as HTMLInputElement;
   twitchField.addEventListener("input", () => {
     currentConfig.twitchLogin = normalizeTwitchLogin(twitchField.value);
+    trackTwitchSelected(currentConfig.twitchLogin);
     updateGeneratedUrl();
   });
 }
@@ -515,7 +562,7 @@ function bindControls() {
     // we don't capture that placeholder as the URL to restore.
     if (urlEl.value && urlEl.dataset.copiedRestore === undefined) {
       navigator.clipboard.writeText(urlEl.value);
-      trackEvent("widget_url_copied", { steamId: currentConfig.steamId });
+      trackEvent("widget_url_copied", configEventProps(currentConfig));
       const box = document.getElementById("copy-url")!.closest(".url-box")!;
       box.classList.add("copied");
       // Swap the icon to a check mark and the URL text to a confirmation, then
@@ -536,7 +583,7 @@ function bindControls() {
   zipBtn.addEventListener("click", () => {
     if (!currentConfig.steamId) return;
     downloadOverlayZip(currentConfig, getWidgetUrl());
-    trackEvent("export_zip_downloaded", { steamId: currentConfig.steamId });
+    trackEvent("export_zip_downloaded", configEventProps(currentConfig));
     const label = zipBtn.querySelector(".zip-label");
     if (label) {
       const original = label.textContent;
@@ -560,6 +607,9 @@ function weightOptionsHtml(): string {
 }
 
 function init() {
+  // Customizer analytics: automatic pageviews on (visitor counts + referrers/UTM).
+  initAnalytics();
+
   const app = document.getElementById("app")!;
   app.innerHTML = `
     <div class="shell">

@@ -37,6 +37,27 @@ export interface PremierData {
   aimRating: number;
 }
 
+// Maps a fetch/resolve failure to a coarse, non-PII reason code for analytics,
+// so silent failures become measurable: an `api_5xx` / `api_rate_limited` spike
+// means Leetify is down or throttling us (a real problem), while `no_premier`
+// is just a visitor without Premier data (not a bug). Kept next to the code
+// that throws these messages so the two stay in sync.
+export function classifyFetchError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  const api = /API error:\s*(\d+)/i.exec(msg);
+  if (api) {
+    const status = Number(api[1]);
+    if (status === 429) return 'api_rate_limited';
+    if (status >= 500) return 'api_5xx';
+    if (status === 404) return 'api_404';
+    return `api_${status}`;
+  }
+  if (/No Premier rank/i.test(msg)) return 'no_premier';
+  if (/recognise that custom URL|recognize that custom URL/i.test(msg)) return 'vanity_not_found';
+  if (/reach the Steam resolver|resolve custom URL|need the Steam proxy/i.test(msg)) return 'resolver_error';
+  return 'other';
+}
+
 export async function fetchPremierData(steamId: string): Promise<PremierData> {
   const headers: Record<string, string> = {};
   if (LEETIFY_KEY) headers._leetify_key = LEETIFY_KEY;

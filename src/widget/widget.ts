@@ -1,5 +1,5 @@
-import { trackEvent } from '../shared/analytics';
-import { fetchPremierData, type PremierData } from '../shared/api';
+import { anonId, initAnalytics, trackEvent } from '../shared/analytics';
+import { classifyFetchError, fetchPremierData, type PremierData } from '../shared/api';
 import { paramsToConfig } from '../shared/config';
 import { loadFont } from '../shared/fonts';
 import { renderMessage, renderWidget } from '../shared/render';
@@ -32,8 +32,6 @@ async function init() {
     return;
   }
 
-  trackEvent('widget_loaded', { steamId: config.steamId });
-
   container.innerHTML = `<div class="widget rank-gray no-badge no-avatar loading">
     <div class="widget-main"><div class="identity"><div class="identity-text">
       <div class="name">Loading…</div>
@@ -48,10 +46,19 @@ async function init() {
   let sessionState: SessionState = sessionMode
     ? loadSession(config.steamId, config.twitchLogin)
     : { live: false, preSessionIds: [], results: {} };
+
+  // Overlay analytics: manual mode only, so streamers' OBS sources are never
+  // page-tracked. One overlay_active per load powers DAU/retention (via the
+  // anonymous uid); go-live sessions and fetch errors are tracked below.
+  initAnalytics({ autoTrack: false });
+  trackEvent('overlay_active', { uid: anonId(), twitch: sessionMode });
   // Latest stats payload and latest known live status, updated by two separate
   // pollers and reconciled by render().
   let lastData: PremierData | null = null;
   let lastLive: boolean | null = null;
+  // Tracks fetch health so an outage fires overlay_error once (on the failing
+  // transition), not on every poll while Leetify stays down.
+  let statsHealthy = true;
 
   // Renders whatever we currently know. In session mode it advances the session
   // from the newest live status + matches, then overrides the W/L pills with the
@@ -60,7 +67,12 @@ async function init() {
     if (!lastData) return;
     let data = lastData;
     if (sessionMode) {
+      const wasLive = sessionState.live;
       sessionState = advanceSession(sessionState, lastLive, lastData.recentGames);
+      // A false→true flip is a fresh stream session starting; count it once.
+      // (An OBS source refresh reloads the persisted live=true state, so it
+      // won't re-fire — we count real go-live transitions, not refreshes.)
+      if (!wasLive && sessionState.live) trackEvent('twitch_session_started');
       saveSession(config.steamId, config.twitchLogin, sessionState);
       const wl = readWinLoss(sessionState);
       if (wl.mode === 'session') {
@@ -73,8 +85,13 @@ async function init() {
   async function updateStats() {
     try {
       lastData = await fetchPremierData(config.steamId);
+      statsHealthy = true;
       render();
     } catch (e) {
+      // Fire once per outage episode (on the healthy→failing transition), so a
+      // sustained outage doesn't emit an event on every refresh.
+      if (statsHealthy) trackEvent('overlay_error', { reason: classifyFetchError(e) });
+      statsHealthy = false;
       // Keep the last good render if we already have one; only show the error
       // state on the very first failure.
       if (!lastData) {

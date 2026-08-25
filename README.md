@@ -195,13 +195,68 @@ with `VITE_TWITCH_PROXY_URL`. Full steps in
 [worker/README.md](./worker/README.md#twitch-live-status-proxy-cloudflare-worker).
 Without it, the pills keep their normal rolling-window behaviour.
 
+### Optional: customizer analytics (Umami)
+
+The customizer reports anonymous usage to [Umami](https://umami.is) — how people
+find the site (referrers/UTM) and which **settings combinations** they build.
+The overlay is not page-tracked; its only event is a per-go-live session count,
+and only when Twitch mode is on (details below). To collect this for your own
+site:
+
+1. Create a free account at [cloud.umami.is](https://cloud.umami.is) and add
+   your website (its domain).
+2. Copy the **Website ID** (a UUID, under Settings → Websites) into
+   `VITE_UMAMI_WEBSITE_ID` — in `.env.local` for local dev, and as a GitHub
+   Actions **repository variable** for the deployed site.
+
+That's it — Umami loads only when the ID is set. Custom events fired:
+
+| Event                    | When                                    | Key properties                              | Page      |
+| ------------------------ | --------------------------------------- | ------------------------------------------- | --------- |
+| `steam_id_entered`       | A Steam ID resolves                     | — (count only)                              | Customizer|
+| `twitch_selected`        | A valid Twitch channel is adopted       | — (count only)                              | Customizer|
+| `preview_error`          | A preview fails to load                 | `stage` (resolve/stats), `reason`           | Customizer|
+| `widget_url_copied`      | "Copy URL" clicked                      | `combo`, `font`, `stats`, `showBadge`, …    | Customizer|
+| `export_zip_downloaded`  | "Export ZIP" clicked                    | `combo`, `font`, `stats`, `showBadge`, …    | Customizer|
+| `overlay_active`         | The overlay loads (in OBS)              | `uid` (anonymous), `twitch`                 | Overlay   |
+| `twitch_session_started` | The stream goes live (new W/L session)  | — (count only)                              | Overlay   |
+| `overlay_error`          | A stats fetch fails (per outage)        | `reason`                                    | Overlay   |
+
+**Adoption:** `twitch_selected` counts how many people turn on Twitch mode; the
+copy/export events also carry a `usesTwitch` property.
+
+**Retention:** `overlay_active` fires once per overlay load and carries an
+anonymous, random `uid` (stored in the overlay's `localStorage`, **not** derived
+from the Steam ID or anything personal) so Umami's Retention report can measure
+returning overlays. `twitch_session_started` counts live sessions (once per
+go-live; an OBS refresh doesn't re-count).
+
+**Reliability:** `preview_error` / `overlay_error` turn otherwise-silent
+failures into a signal. `reason` is a coarse code — `api_5xx` / `api_rate_limited`
+(Leetify down or throttling), `no_premier` (visitor has no Premier data — not a
+bug), `vanity_not_found`, `resolver_error`, `other`. `overlay_error` fires once
+per outage episode, not per poll.
+
+The overlay loads Umami in **manual mode** (no automatic pageviews), so it emits
+only the three events above and is never page-tracked. No event sends the Steam
+ID or Twitch channel.
+
+To find the **most common setup**, open your Umami dashboard → the event →
+**Properties** → `combo`: each value is a whole configuration (e.g.
+`badge=1&history=1&stats=kd,avg,winpct`), ranked by frequency. The individual
+properties (`font`, `stats`, …) let you slice one setting at a time.
+**Referrers/acquisition** and **UTM links** are built in — Umami's Referrers
+report reads `utm_*` params automatically, so any `?utm_source=…` link you
+share is tracked with no extra setup.
+
 ### Environment variables
 
-| Variable                 | Required | Purpose                                                   |
-| ------------------------ | -------- | --------------------------------------------------------- |
-| `VITE_LEETIFY_KEY`       | No       | Leetify Public API key — raises rate limits (secret)      |
-| `VITE_AVATAR_PROXY_URL`  | No       | Steam avatar / custom-link proxy Worker URL (public)      |
-| `VITE_TWITCH_PROXY_URL`  | No       | Twitch live-status proxy Worker URL (public)              |
+| Variable                  | Required | Purpose                                                   |
+| ------------------------- | -------- | --------------------------------------------------------- |
+| `VITE_LEETIFY_KEY`        | No       | Leetify Public API key — raises rate limits (secret)      |
+| `VITE_AVATAR_PROXY_URL`   | No       | Steam avatar / custom-link proxy Worker URL (public)      |
+| `VITE_TWITCH_PROXY_URL`   | No       | Twitch live-status proxy Worker URL (public)              |
+| `VITE_UMAMI_WEBSITE_ID`   | No       | Umami Cloud website ID for customizer analytics (public)  |
 
 See [`.env.example`](.env.example) for details on each.
 
@@ -223,6 +278,7 @@ public/           Static assets (fonts, CNAME)
 | [Vite](https://vitejs.dev) | Multi-page build & dev server |
 | [Leetify API](https://leetify.com) | Live CS2 stats & match data |
 | [Cloudflare Workers](https://workers.cloudflare.com) | Optional avatar + Twitch live-status proxies |
+| [Umami](https://umami.is) | Optional privacy-friendly customizer analytics |
 
 ### Contributing
 
