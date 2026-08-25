@@ -54,12 +54,16 @@ export function analyticsEnabled(): boolean {
 
 // True once the visitor has explicitly accepted or rejected, so the banner
 // isn't shown again on return visits.
+//
+// NOTE: we must NOT use has_opted_out_capturing() here. With
+// opt_out_capturing_by_default (set in initAnalytics), a first-time visitor is
+// already reported as "opted out" before making any choice, so that check would
+// always be true and the banner would never appear. get_explicit_consent_status
+// reads the *stored* choice only ("pending" until the visitor actually decides).
 export function consentDecided(): boolean {
   if (!ENABLED || !started) return false;
   try {
-    return (
-      posthog.has_opted_in_capturing() || posthog.has_opted_out_capturing()
-    );
+    return posthog.get_explicit_consent_status() !== "pending";
   } catch {
     return false;
   }
