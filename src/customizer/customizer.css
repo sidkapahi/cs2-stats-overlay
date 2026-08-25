@@ -119,7 +119,7 @@ body {
   color: var(--text-dim);
 }
 
-/* Header button row: repo chip (auto) + BMC / Twitch (equal, flexible) */
+/* Header button row: repo chip (auto) + Ko-fi / Twitch (equal, flexible) */
 .link-row {
   display: flex;
   gap: 6px;
@@ -159,15 +159,15 @@ body {
   letter-spacing: -0.02em;
 }
 
-.link-bmc,
+.link-kofi,
 .link-twitch {
   flex: 1;
   min-width: 0;
 }
 
-.link-bmc {
-  background: #ffdd00;
-  color: #101411;
+.link-kofi {
+  background: #72a4f2;
+  color: #ffffff;
 }
 
 .link-twitch {
@@ -183,10 +183,10 @@ body {
   flex-shrink: 0;
 }
 
-/* Size the Buy Me a Coffee / Twitch marks by height so a swapped-in custom SVG
+/* Size the Ko-fi / Twitch marks by height so a swapped-in custom SVG
    (icon or full wordmark, with or without its own width/height attrs) always
    fits the chip. */
-.link-bmc svg,
+.link-kofi svg,
 .link-twitch svg {
   height: 18px;
   width: auto;

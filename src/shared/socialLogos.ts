@@ -9,9 +9,9 @@
 // `fill="currentColor"`/`stroke="currentColor"` so they inherit each button's
 // text color; a brand SVG with its own colors will paint those instead, which is
 // usually what you want when dropping in an official logo.
-import buyMeACoffeeLogo from "../../assets/logos/buymeacoffee.svg?raw";
 import gitHubLogo from "../../assets/logos/github.svg?raw";
+import koFiLogo from "../../assets/logos/kofi.svg?raw";
 import streamElementsLogo from "../../assets/logos/streamelements.svg?raw";
 import twitchLogo from "../../assets/logos/twitch.svg?raw";
 
-export { buyMeACoffeeLogo, gitHubLogo, streamElementsLogo, twitchLogo };
+export { gitHubLogo, koFiLogo, streamElementsLogo, twitchLogo };
