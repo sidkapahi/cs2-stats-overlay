@@ -697,8 +697,9 @@ function mountConsentUi() {
       <p class="cookie-title">Delicious Cookies</p>
       <p class="cookie-text">We use privacy-friendly analytics to help improve CS2 Stats Overlay and its features.</p>
     </div>
+    <button type="button" class="cookie-privacy" id="cookie-privacy">Privacy Policy</button>
     <div class="cookie-actions">
-      <button type="button" class="cookie-btn cookie-reject" id="cookie-reject">Opt-out</button>
+      <button type="button" class="cookie-btn cookie-reject" id="cookie-reject">No thanks</button>
       <button type="button" class="cookie-btn cookie-accept" id="cookie-accept">Allow</button>
     </div>
   `;
@@ -746,6 +747,7 @@ function mountConsentUi() {
 
   banner.querySelector("#cookie-accept")!.addEventListener("click", () => decide(true));
   banner.querySelector("#cookie-reject")!.addEventListener("click", () => decide(false));
+  banner.querySelector("#cookie-privacy")!.addEventListener("click", openModal);
   modalAccept.addEventListener("click", () => decide(true));
   modalReject.addEventListener("click", () => decide(false));
   root.querySelector("#privacy-close")!.addEventListener("click", closeModal);
