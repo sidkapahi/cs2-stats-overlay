@@ -1,4 +1,3 @@
-import { trackEvent } from '../shared/analytics';
 import { fetchPremierData, type PremierData } from '../shared/api';
 import { paramsToConfig } from '../shared/config';
 import { loadFont } from '../shared/fonts';
@@ -31,8 +30,6 @@ async function init() {
     container.innerHTML = renderMessage('Error', 'No Steam ID provided.');
     return;
   }
-
-  trackEvent('widget_loaded', { steamId: config.steamId });
 
   container.innerHTML = `<div class="widget rank-gray no-badge no-avatar loading">
     <div class="widget-main"><div class="identity"><div class="identity-text">

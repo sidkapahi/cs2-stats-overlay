@@ -64,6 +64,20 @@ export function configToParams(config: WidgetConfig): URLSearchParams {
   return params;
 }
 
+// A compact, stable string that identifies a *setup* — every visible setting
+// except the identifying ones (steamId, twitchLogin). Because configToParams
+// only encodes values that differ from the defaults, an all-default setup
+// fingerprints as 'defaults'. Keys are sorted so the same choices always map to
+// the same string, which is what lets analytics rank the most common combos:
+// send this as one event property and Umami's Properties breakdown groups by it.
+export function settingsFingerprint(config: WidgetConfig): string {
+  const params = configToParams(config);
+  params.delete('steamId');
+  params.delete('twitch');
+  params.sort();
+  return params.toString() || 'defaults';
+}
+
 export function paramsToConfig(params: URLSearchParams): WidgetConfig {
   // Stats: 'off' hides the block; a comma list picks specific stats; absent uses
   // the default trio.
