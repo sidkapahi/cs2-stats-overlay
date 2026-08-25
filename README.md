@@ -215,6 +215,7 @@ That's it — Umami loads only when the ID is set. Custom events fired:
 | ------------------------ | --------------------------------------- | ------------------------------------------- | --------- |
 | `steam_id_entered`       | A Steam ID resolves                     | — (count only)                              | Customizer|
 | `twitch_selected`        | A valid Twitch channel is adopted       | — (count only)                              | Customizer|
+| `social_click`           | A header link is clicked                | `target` (github/kofi/twitch)               | Customizer|
 | `preview_error`          | A preview fails to load                 | `stage` (resolve/stats), `reason`           | Customizer|
 | `widget_url_copied`      | "Copy URL" clicked                      | `combo`, `font`, `stats`, `showBadge`, …    | Customizer|
 | `export_zip_downloaded`  | "Export ZIP" clicked                    | `combo`, `font`, `stats`, `showBadge`, …    | Customizer|

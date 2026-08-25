@@ -556,6 +556,15 @@ function bindControls() {
   bindWeight();
   bindBackground();
 
+  // Outbound header links (GitHub / Ko-fi / Twitch). One delegated listener
+  // reads data-link so a single social_click event, broken down by `target`,
+  // covers all three. They open in a new tab, so the page stays put and the
+  // event has time to send.
+  document.querySelector(".link-row")?.addEventListener("click", (e) => {
+    const link = (e.target as HTMLElement).closest<HTMLAnchorElement>("[data-link]");
+    if (link) trackEvent("social_click", { target: link.dataset.link ?? "unknown" });
+  });
+
   document.getElementById("copy-url")!.addEventListener("click", () => {
     const urlEl = document.getElementById("generated-url") as HTMLInputElement;
     // Ignore repeat clicks while the "Link Copied!" confirmation is showing so
@@ -620,9 +629,9 @@ function init() {
             <p class="setup-sub">Customize and use your own overlay widget for CS2. Enter your Twitch username to have a live W/L.</p>
           </div>
           <div class="link-row">
-            <a class="link-chip link-repo" href="${REPO_URL}" target="_blank" rel="noopener">${ICON_GITHUB}<span>cs2-stats-overlay</span></a>
-            <a class="link-chip link-kofi" href="${KOFI_URL}" target="_blank" rel="noopener" aria-label="Ko-fi">${ICON_KOFI}</a>
-            <a class="link-chip link-twitch" href="${TWITCH_URL}" target="_blank" rel="noopener" aria-label="Twitch">${ICON_TWITCH}</a>
+            <a class="link-chip link-repo" data-link="github" href="${REPO_URL}" target="_blank" rel="noopener">${ICON_GITHUB}<span>cs2-stats-overlay</span></a>
+            <a class="link-chip link-kofi" data-link="kofi" href="${KOFI_URL}" target="_blank" rel="noopener" aria-label="Ko-fi">${ICON_KOFI}</a>
+            <a class="link-chip link-twitch" data-link="twitch" href="${TWITCH_URL}" target="_blank" rel="noopener" aria-label="Twitch">${ICON_TWITCH}</a>
           </div>
         </div>
 
