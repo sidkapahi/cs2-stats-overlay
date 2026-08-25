@@ -195,21 +195,19 @@ with `VITE_TWITCH_PROXY_URL`. Full steps in
 [worker/README.md](./worker/README.md#twitch-live-status-proxy-cloudflare-worker).
 Without it, the pills keep their normal rolling-window behaviour.
 
-### Optional: customizer analytics (Umami)
+### Optional: analytics (PostHog)
 
-The customizer reports anonymous usage to [Umami](https://umami.is) — how people
-find the site (referrers/UTM) and which **settings combinations** they build.
-The overlay is not page-tracked; its only event is a per-go-live session count,
-and only when Twitch mode is on (details below). To collect this for your own
-site:
+Analytics runs on [PostHog](https://posthog.com) — how people find the site
+(referrers/UTM), which **settings combinations** they build, adoption,
+retention, and errors. To collect this for your own site:
 
-1. Create a free account at [cloud.umami.is](https://cloud.umami.is) and add
-   your website (its domain).
-2. Copy the **Website ID** (a UUID, under Settings → Websites) into
-   `VITE_UMAMI_WEBSITE_ID` — in `.env.local` for local dev, and as a GitHub
-   Actions **repository variable** for the deployed site.
+1. Create a free project at [posthog.com](https://posthog.com).
+2. Copy the **Project API Key** (starts with `phc_`) into `VITE_POSTHOG_KEY`,
+   and set `VITE_POSTHOG_HOST` to your region (`https://us.i.posthog.com` or
+   `https://eu.i.posthog.com`) — in `.env.local` for local dev, and as GitHub
+   Actions **repository variables** for the deployed site.
 
-That's it — Umami loads only when the ID is set. Custom events fired:
+Nothing loads without a key. Custom events:
 
 | Event                    | When                                    | Key properties                              | Page      |
 | ------------------------ | --------------------------------------- | ------------------------------------------- | --------- |
@@ -219,36 +217,31 @@ That's it — Umami loads only when the ID is set. Custom events fired:
 | `preview_error`          | A preview fails to load                 | `stage` (resolve/stats), `reason`           | Customizer|
 | `widget_url_copied`      | "Copy URL" clicked                      | `combo`, `font`, `stats`, `showBadge`, …    | Customizer|
 | `export_zip_downloaded`  | "Export ZIP" clicked                    | `combo`, `font`, `stats`, `showBadge`, …    | Customizer|
-| `overlay_active`         | The overlay loads (in OBS)              | `uid` (anonymous), `twitch`                 | Overlay   |
+| `overlay_active`         | The overlay loads (in OBS)              | `twitch`                                    | Overlay   |
 | `twitch_session_started` | The stream goes live (new W/L session)  | — (count only)                              | Overlay   |
 | `overlay_error`          | A stats fetch fails (per outage)        | `reason`                                    | Overlay   |
+
+**Cookies & consent:** the **customizer** uses cookie-based analytics but starts
+**opted out** — nothing is captured until the visitor accepts the cookie banner
+(they can review/change the choice via the footer's *Privacy & Cookies* modal).
+The **overlay** runs PostHog **cookieless** (memory persistence — no cookies, no
+storage, no consent banner on stream); the trade-off is overlay loads aren't
+linked across sessions, so `overlay_active` is a count, not a unique-user figure.
 
 **Adoption:** `twitch_selected` counts how many people turn on Twitch mode; the
 copy/export events also carry a `usesTwitch` property.
 
-**Retention:** `overlay_active` fires once per overlay load and carries an
-anonymous, random `uid` (stored in the overlay's `localStorage`, **not** derived
-from the Steam ID or anything personal) so Umami's Retention report can measure
-returning overlays. `twitch_session_started` counts live sessions (once per
-go-live; an OBS refresh doesn't re-count).
-
-**Reliability:** `preview_error` / `overlay_error` turn otherwise-silent
-failures into a signal. `reason` is a coarse code — `api_5xx` / `api_rate_limited`
+**Reliability:** `preview_error` / `overlay_error` turn otherwise-silent failures
+into a signal. `reason` is a coarse code — `api_5xx` / `api_rate_limited`
 (Leetify down or throttling), `no_premier` (visitor has no Premier data — not a
 bug), `vanity_not_found`, `resolver_error`, `other`. `overlay_error` fires once
 per outage episode, not per poll.
 
-The overlay loads Umami in **manual mode** (no automatic pageviews), so it emits
-only the three events above and is never page-tracked. No event sends the Steam
-ID or Twitch channel.
-
-To find the **most common setup**, open your Umami dashboard → the event →
-**Properties** → `combo`: each value is a whole configuration (e.g.
-`badge=1&history=1&stats=kd,avg,winpct`), ranked by frequency. The individual
-properties (`font`, `stats`, …) let you slice one setting at a time.
-**Referrers/acquisition** and **UTM links** are built in — Umami's Referrers
-report reads `utm_*` params automatically, so any `?utm_source=…` link you
-share is tracked with no extra setup.
+No event sends the Steam ID or Twitch channel. To find the **most common setup**,
+open PostHog → the event → break down by the `combo` property: each value is a
+whole configuration (e.g. `badge=1&history=1&stats=kd,avg,winpct`). PostHog
+captures `utm_*` params automatically, so any `?utm_source=…` link you share is
+attributed with no extra setup.
 
 ### Environment variables
 
@@ -257,7 +250,8 @@ share is tracked with no extra setup.
 | `VITE_LEETIFY_KEY`        | No       | Leetify Public API key — raises rate limits (secret)      |
 | `VITE_AVATAR_PROXY_URL`   | No       | Steam avatar / custom-link proxy Worker URL (public)      |
 | `VITE_TWITCH_PROXY_URL`   | No       | Twitch live-status proxy Worker URL (public)              |
-| `VITE_UMAMI_WEBSITE_ID`   | No       | Umami Cloud website ID for customizer analytics (public)  |
+| `VITE_POSTHOG_KEY`        | No       | PostHog project API key for analytics (public)            |
+| `VITE_POSTHOG_HOST`       | No       | PostHog API host / region (default US)                    |
 
 See [`.env.example`](.env.example) for details on each.
 
@@ -279,7 +273,7 @@ public/           Static assets (fonts, CNAME)
 | [Vite](https://vitejs.dev) | Multi-page build & dev server |
 | [Leetify API](https://leetify.com) | Live CS2 stats & match data |
 | [Cloudflare Workers](https://workers.cloudflare.com) | Optional avatar + Twitch live-status proxies |
-| [Umami](https://umami.is) | Optional privacy-friendly customizer analytics |
+| [PostHog](https://posthog.com) | Optional product analytics (consent-gated) |
 
 ### Contributing
 

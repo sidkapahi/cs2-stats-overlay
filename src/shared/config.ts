@@ -69,7 +69,7 @@ export function configToParams(config: WidgetConfig): URLSearchParams {
 // only encodes values that differ from the defaults, an all-default setup
 // fingerprints as 'defaults'. Keys are sorted so the same choices always map to
 // the same string, which is what lets analytics rank the most common combos:
-// send this as one event property and Umami's Properties breakdown groups by it.
+// send this as one event property and break down by it in PostHog to rank combos.
 export function settingsFingerprint(config: WidgetConfig): string {
   const params = configToParams(config);
   params.delete('steamId');

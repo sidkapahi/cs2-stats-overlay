@@ -22,9 +22,9 @@
   <meta name="twitter:description" content="A customizable CS2 stats overlay for your stream.">
   <meta name="twitter:image" content="https://cs2widget.kapkit.ca/og-image.png">
 
-  <!-- Umami Analytics is loaded from src/shared/analytics.ts, but only when
-       VITE_UMAMI_WEBSITE_ID is set (see .env.example). Injecting it there keeps
-       forks/local dev without an ID from loading anything. -->
+  <!-- Analytics (PostHog) is initialized from src/shared/analytics.ts, only when
+       VITE_POSTHOG_KEY is set (see .env.example), and only after the visitor
+       accepts the cookie banner. Nothing is bundled or sent without a key. -->
 </head>
 <body>
   <div id="app"></div>
