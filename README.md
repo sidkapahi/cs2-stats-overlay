@@ -20,7 +20,7 @@ A free OBS / StreamElements overlay that shows your CS2 Premier rating, rank bad
 
 <br/><br/>
 
-**[How it works](#use-or-create-an-overlay)** · **[Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)**
+**[How-To Guide](#how-to-guide)** · **[Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)**
 
 </div>
 
@@ -49,12 +49,13 @@ Everything is toggleable, so you can run a minimal rating-only badge or the full
 stats card — your call.
 
 > [!NOTE]
-> This project was built with AI assistance ("vibe coded"). It works and is used
-> on live streams, but the code hasn't had a formal security audit. It's a static
-> site that only reads public stats — use at your own discretion, and PRs are
-> always welcome.
+> **Built with [Claude Code](https://claude.com/claude-code) from a [Figma](https://www.figma.com) design, with security in mind.**
+> There's **no login, no accounts, and nothing personal to hand over** — it's a
+> static site that only reads your **public** CS2 stats. It's actively used on
+> live streams, and I'd love help making it even better — **developers and
+> contributors, [PRs are very welcome](https://github.com/sidkapahi/cs2-stats-overlay/pulls)!**
 
-## Use or Create an Overlay
+## How-To Guide
 
 You don't need to install anything to use the overlay. The hosted customizer
 builds your URL for you.
