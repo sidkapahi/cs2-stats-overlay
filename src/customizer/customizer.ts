@@ -623,10 +623,9 @@ function weightOptionsHtml(): string {
 }
 
 // Cookie consent banner + Privacy & Cookies modal. Analytics starts opted out
-// (see initAnalytics). The banner sits unobtrusively at the bottom of the
-// sidebar; interacting with the customizer counts as acceptance (implied
-// consent), so it never blocks anyone. The overlay is cookieless and shows none
-// of this.
+// (see initAnalytics). The banner is pinned to the bottom of the viewport;
+// interacting with the customizer counts as acceptance (implied consent), so it
+// never blocks anyone. The overlay is cookieless and shows none of this.
 function mountConsentUi() {
   if (!analyticsEnabled()) return; // no analytics configured → nothing to consent to
 
@@ -684,7 +683,7 @@ function mountConsentUi() {
   `;
   document.body.appendChild(root);
 
-  // The banner is a small card at the bottom of the sidebar.
+  // The banner is a small card pinned to the bottom of the viewport.
   const banner = document.createElement("div");
   banner.className = "cookie-banner";
   banner.hidden = true;
@@ -700,7 +699,7 @@ function mountConsentUi() {
       <button type="button" class="cookie-btn cookie-accept" id="cookie-accept">Accept</button>
     </div>
   `;
-  document.querySelector(".setup-foot")?.insertAdjacentElement("afterend", banner);
+  document.body.appendChild(banner);
 
   const overlay = root.querySelector<HTMLElement>("#privacy-overlay")!;
   const stateEl = root.querySelector<HTMLElement>("#consent-state")!;

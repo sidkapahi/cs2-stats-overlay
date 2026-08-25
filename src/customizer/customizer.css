@@ -65,6 +65,14 @@ body {
   color: var(--text);
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
+  /* widget.css (imported for the live preview's .widget styles) sets a global
+     `body { overflow: hidden }` for the OBS overlay iframe. That leaks onto the
+     customizer's own body and kills page scrolling — most visibly on mobile,
+     where the whole layout stacks taller than the viewport. Restore scrolling
+     here (this rule loads after widget.css), and keep horizontal locked so the
+     fixed-width layout never produces a sideways scrollbar. */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 #app {
@@ -812,22 +820,30 @@ select.field-input {
   color: var(--text);
 }
 
-/* ---- Cookie consent banner (bottom of the sidebar) ---------------------- */
+/* ---- Cookie consent banner (pinned to the bottom of the viewport) -------- */
 .cookie-banner {
-  width: 100%;
-  margin-top: 6px;
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 90; /* under the privacy modal overlay (z-index: 100) */
+  width: min(640px, calc(100% - 24px));
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px 14px;
-  background: var(--input-bg);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 14px 16px;
+  background: var(--card);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-field);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
 }
 .cookie-banner[hidden] {
   display: none;
 }
 .cookie-text {
+  flex: 1;
+  min-width: 200px;
   font-size: 12.5px;
   line-height: 1.5;
   color: var(--text-dim);
@@ -848,6 +864,9 @@ select.field-input {
   gap: 8px;
   flex-shrink: 0;
   justify-content: flex-end;
+  /* Keep the buttons hard-right in the bottom bar, whether they share the row
+     with the text or wrap onto their own line. */
+  margin-left: auto;
 }
 .cookie-btn {
   cursor: pointer;
