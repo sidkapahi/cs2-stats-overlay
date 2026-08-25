@@ -16,7 +16,7 @@ body {
   display: inline-flex;
   flex-direction: column;
   gap: 14px;
-  color: #fff;
+  color: #f0f0f0;
 }
 
 .widget-main {
@@ -50,7 +50,7 @@ body {
 .name {
   font-size: 24px;
   font-weight: var(--w-weight, 700);
-  color: #fff;
+  color: #f0f0f0;
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -174,7 +174,7 @@ body {
 .stat-val {
   font-size: 24px;
   font-weight: var(--w-weight, 700);
-  color: #fff;
+  color: #f0f0f0;
   line-height: 1;
   /* Tabular figures so every digit takes the same width — keeps values like
      "1.12" from reading as smaller than fuller numbers such as "17.0". */
