@@ -877,6 +877,23 @@ select.field-input {
   line-height: 1.5;
   color: var(--text-dim);
 }
+/* Underlined link under the copy; opens the Privacy & Cookies modal. */
+.cookie-privacy {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+}
+.cookie-privacy:hover {
+  color: var(--text);
+}
 .cookie-actions {
   display: flex;
   gap: 8px;
@@ -911,6 +928,16 @@ select.field-input {
 }
 .cookie-accept:hover {
   filter: brightness(1.08);
+}
+
+/* In the banner the reject choice is a solid dark button (the modal keeps the
+   transparent .cookie-reject above). */
+.cookie-banner .cookie-reject {
+  background: var(--input-bg);
+  color: var(--text);
+}
+.cookie-banner .cookie-reject:hover {
+  background: #1a1a1a;
 }
 
 /* Banner-specific: the two choices share the bottom row as equal, uppercase
