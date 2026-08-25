@@ -626,8 +626,8 @@ function weightOptionsHtml(): string {
 // Cookie consent banner + Privacy & Cookies modal. Analytics starts opted out
 // (see initAnalytics) and stays that way until the visitor explicitly clicks
 // Accept or Reject — nothing else counts as consent, so the banner remains
-// until they choose. The banner is pinned to the bottom of the viewport. The
-// overlay is cookieless and shows none of this.
+// until they choose. The banner is a card pinned to the bottom of the setup
+// sidebar. The overlay is cookieless and shows none of this.
 function mountConsentUi() {
   if (!analyticsEnabled()) return; // no analytics configured → nothing to consent to
 
@@ -685,20 +685,21 @@ function mountConsentUi() {
   `;
   document.body.appendChild(root);
 
-  // The banner is a small card pinned to the bottom of the viewport.
+  // The banner is a small card pinned to the bottom of the setup sidebar.
   const banner = document.createElement("div");
   banner.className = "cookie-banner";
   banner.hidden = true;
   banner.setAttribute("role", "region");
   banner.setAttribute("aria-label", "Cookie consent");
   banner.innerHTML = `
-    <p class="cookie-text">
-      Privacy-friendly analytics help improve kapKit. Allow cookies?
-      <button type="button" class="cookie-learn" id="cookie-learn">What we collect</button>
-    </p>
+    <img class="cookie-logo" src="${brandLogoSrc}" alt="kapKit">
+    <div class="cookie-copy">
+      <p class="cookie-title">Delicious Cookies</p>
+      <p class="cookie-text">We use privacy-friendly analytics to help improve CS2 Stats Overlay and its features.</p>
+    </div>
     <div class="cookie-actions">
-      <button type="button" class="cookie-btn cookie-reject" id="cookie-reject">Reject</button>
-      <button type="button" class="cookie-btn cookie-accept" id="cookie-accept">Accept</button>
+      <button type="button" class="cookie-btn cookie-reject" id="cookie-reject">Opt-out</button>
+      <button type="button" class="cookie-btn cookie-accept" id="cookie-accept">Allow</button>
     </div>
   `;
   document.body.appendChild(banner);
@@ -745,7 +746,6 @@ function mountConsentUi() {
 
   banner.querySelector("#cookie-accept")!.addEventListener("click", () => decide(true));
   banner.querySelector("#cookie-reject")!.addEventListener("click", () => decide(false));
-  banner.querySelector("#cookie-learn")!.addEventListener("click", openModal);
   modalAccept.addEventListener("click", () => decide(true));
   modalReject.addEventListener("click", () => decide(false));
   root.querySelector("#privacy-close")!.addEventListener("click", closeModal);
