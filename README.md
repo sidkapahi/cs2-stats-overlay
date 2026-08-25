@@ -215,16 +215,31 @@ That's it — Umami loads only when the ID is set. Custom events fired:
 | ------------------------ | --------------------------------------- | ------------------------------------------- | --------- |
 | `steam_id_entered`       | A Steam ID resolves                     | — (count only)                              | Customizer|
 | `twitch_selected`        | A valid Twitch channel is adopted       | — (count only)                              | Customizer|
+| `preview_error`          | A preview fails to load                 | `stage` (resolve/stats), `reason`           | Customizer|
 | `widget_url_copied`      | "Copy URL" clicked                      | `combo`, `font`, `stats`, `showBadge`, …    | Customizer|
 | `export_zip_downloaded`  | "Export ZIP" clicked                    | `combo`, `font`, `stats`, `showBadge`, …    | Customizer|
+| `overlay_active`         | The overlay loads (in OBS)              | `uid` (anonymous), `twitch`                 | Overlay   |
 | `twitch_session_started` | The stream goes live (new W/L session)  | — (count only)                              | Overlay   |
+| `overlay_error`          | A stats fetch fails (per outage)        | `reason`                                    | Overlay   |
 
-`twitch_selected` counts how many people turn on Twitch mode; the copy/export
-events also carry a `usesTwitch` property. `twitch_session_started` counts how
-many live sessions the overlay has tracked — it's the overlay's only event, it
-fires once per go-live (an OBS refresh doesn't re-count), and Umami loads there
-in manual mode so the overlay is never page-tracked. None of these send the
-Steam ID or Twitch channel — they're anonymous counts.
+**Adoption:** `twitch_selected` counts how many people turn on Twitch mode; the
+copy/export events also carry a `usesTwitch` property.
+
+**Retention:** `overlay_active` fires once per overlay load and carries an
+anonymous, random `uid` (stored in the overlay's `localStorage`, **not** derived
+from the Steam ID or anything personal) so Umami's Retention report can measure
+returning overlays. `twitch_session_started` counts live sessions (once per
+go-live; an OBS refresh doesn't re-count).
+
+**Reliability:** `preview_error` / `overlay_error` turn otherwise-silent
+failures into a signal. `reason` is a coarse code — `api_5xx` / `api_rate_limited`
+(Leetify down or throttling), `no_premier` (visitor has no Premier data — not a
+bug), `vanity_not_found`, `resolver_error`, `other`. `overlay_error` fires once
+per outage episode, not per poll.
+
+The overlay loads Umami in **manual mode** (no automatic pageviews), so it emits
+only the three events above and is never page-tracked. No event sends the Steam
+ID or Twitch channel.
 
 To find the **most common setup**, open your Umami dashboard → the event →
 **Properties** → `combo`: each value is a whole configuration (e.g.

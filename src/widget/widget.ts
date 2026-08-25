@@ -1,5 +1,5 @@
-import { initAnalytics, trackEvent } from '../shared/analytics';
-import { fetchPremierData, type PremierData } from '../shared/api';
+import { anonId, initAnalytics, trackEvent } from '../shared/analytics';
+import { classifyFetchError, fetchPremierData, type PremierData } from '../shared/api';
 import { paramsToConfig } from '../shared/config';
 import { loadFont } from '../shared/fonts';
 import { renderMessage, renderWidget } from '../shared/render';
@@ -47,14 +47,18 @@ async function init() {
     ? loadSession(config.steamId, config.twitchLogin)
     : { live: false, preSessionIds: [], results: {} };
 
-  // The overlay is otherwise never tracked. Only in Twitch session mode do we
-  // load Umami — in manual mode (no pageviews), purely to fire one
-  // twitch_session_started event per go-live so we can count live sessions.
-  if (sessionMode) initAnalytics({ autoTrack: false });
+  // Overlay analytics: manual mode only, so streamers' OBS sources are never
+  // page-tracked. One overlay_active per load powers DAU/retention (via the
+  // anonymous uid); go-live sessions and fetch errors are tracked below.
+  initAnalytics({ autoTrack: false });
+  trackEvent('overlay_active', { uid: anonId(), twitch: sessionMode });
   // Latest stats payload and latest known live status, updated by two separate
   // pollers and reconciled by render().
   let lastData: PremierData | null = null;
   let lastLive: boolean | null = null;
+  // Tracks fetch health so an outage fires overlay_error once (on the failing
+  // transition), not on every poll while Leetify stays down.
+  let statsHealthy = true;
 
   // Renders whatever we currently know. In session mode it advances the session
   // from the newest live status + matches, then overrides the W/L pills with the
@@ -81,8 +85,13 @@ async function init() {
   async function updateStats() {
     try {
       lastData = await fetchPremierData(config.steamId);
+      statsHealthy = true;
       render();
     } catch (e) {
+      // Fire once per outage episode (on the healthy→failing transition), so a
+      // sustained outage doesn't emit an event on every refresh.
+      if (statsHealthy) trackEvent('overlay_error', { reason: classifyFetchError(e) });
+      statsHealthy = false;
       // Keep the last good render if we already have one; only show the error
       // state on the very first failure.
       if (!lastData) {
