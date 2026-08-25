@@ -176,6 +176,10 @@ body {
   font-weight: var(--w-weight, 700);
   color: #fff;
   line-height: 1;
+  /* Tabular figures so every digit takes the same width — keeps values like
+     "1.12" from reading as smaller than fuller numbers such as "17.0". */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
 }
 
 .stat-lbl {
