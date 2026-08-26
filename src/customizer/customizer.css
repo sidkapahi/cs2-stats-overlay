@@ -909,6 +909,11 @@ select.field-input {
 .foot-link:hover {
   color: var(--text);
 }
+.foot-sep {
+  color: var(--text-dim);
+  font-size: 12px;
+  user-select: none;
+}
 
 /* ---- Cookie consent banner (a card pinned to the bottom of the setup
    sidebar, floating on top of its lower content) -------------------------- */
