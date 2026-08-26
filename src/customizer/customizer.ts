@@ -453,14 +453,20 @@ function bindWl() {
     editingLive = true;
   });
   liveField.addEventListener("input", () => {
+    // Update the preview/URL live as they type, but don't track yet: every
+    // keystroke of a bare login is itself a "valid" channel, so tracking here
+    // fires a live_selected per character. Tracking happens on commit (blur).
     applyLiveInput();
-    trackLiveSelected();
     updateGeneratedUrl();
   });
   // Leaving the field (blur) or pressing Enter collapses it into the chip once a
   // valid channel is present.
   liveField.addEventListener("blur", () => {
     editingLive = false;
+    // Commit point: the user has finished typing (blurred or pressed Enter, which
+    // blurs). Track the final channel here so we get one event per real channel
+    // rather than one per keystroke.
+    trackLiveSelected();
     syncWlUi();
   });
   liveField.addEventListener("keydown", (e) => {
