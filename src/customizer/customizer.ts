@@ -25,8 +25,11 @@ import { renderMessage, renderWidget } from "../shared/render";
 import {
   gitHubLogo,
   koFiLogo,
+  kickMark,
   streamElementsLogo,
   twitchLogo,
+  twitchMark,
+  youTubeMark,
 } from "../shared/socialLogos";
 import { parseSteamInput } from "../shared/steamId";
 import {
@@ -54,6 +57,14 @@ const ICON_KOFI = koFiLogo;
 const ICON_TWITCH = twitchLogo;
 const ICON_STREAMELEMENTS = streamElementsLogo;
 const ICON_CARET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
+// Pencil for the live-session chip's "edit" button (return to the input).
+const ICON_PENCIL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+// Monochrome platform mark shown in the live-session chip, keyed by platform.
+const LIVE_PLATFORM_MARKS: Record<string, string> = {
+  twitch: twitchMark,
+  youtube: youTubeMark,
+  kick: kickMark,
+};
 // Phosphor "Copy" and "Check" (bold weight) — the copy button crossfades from
 // one to the other when the URL is copied.
 const ICON_COPY = `<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216,28H88A12,12,0,0,0,76,40V76H40A12,12,0,0,0,28,88V216a12,12,0,0,0,12,12H168a12,12,0,0,0,12-12V180h36a12,12,0,0,0,12-12V40A12,12,0,0,0,216,28ZM156,204H52V100H156Zm48-48H180V88a12,12,0,0,0-12-12H100V52H204Z"/></svg>`;
@@ -102,6 +113,10 @@ let lastTrackedLive = "";
 // per-stream session (reveals the live-channel field). Mirrors whether a live
 // channel is set on the config.
 let wlMode: "leetify" | "live" = "leetify";
+// When true, show the live-channel input even though a channel is set — i.e. the
+// user is entering or editing a link. When false (and a channel is set), the
+// input collapses into the platform chip.
+let editingLive = false;
 // Bumped on every new resolve so a slow vanity lookup that finishes after the
 // user has typed something else can't overwrite the newer input's result.
 let resolveToken = 0;
@@ -353,8 +368,27 @@ function syncWlUi() {
     seg.classList.toggle("selected", seg.dataset.mode === wlMode);
     seg.disabled = !on;
   }
+
+  // In Live mode: once a valid channel is set (and we're not editing) the input
+  // collapses into the platform chip; otherwise the input is shown so the user
+  // can paste a link.
+  const liveActive = on && wlMode === "live";
+  const hasChannel = !!currentConfig.livePlatform && !!currentConfig.liveChannel;
+  const showChip = liveActive && hasChannel && !editingLive;
+
   const liveField = document.getElementById("live-channel") as HTMLInputElement;
-  liveField.hidden = !(on && wlMode === "live");
+  const chip = document.getElementById("live-chip")!;
+  liveField.hidden = !(liveActive && !showChip);
+  chip.hidden = !showChip;
+  if (showChip) renderLiveChip();
+}
+
+// Fills the chip with the current platform's mark and channel name.
+function renderLiveChip() {
+  const logo = document.getElementById("live-chip-logo")!;
+  const name = document.getElementById("live-chip-name")!;
+  logo.innerHTML = LIVE_PLATFORM_MARKS[currentConfig.livePlatform] ?? "";
+  name.textContent = currentConfig.liveChannel;
 }
 
 // Reads the live-channel input, detects the platform, and writes the parsed
@@ -391,6 +425,8 @@ function bindWl() {
     updateGeneratedUrl();
   });
 
+  const liveField = document.getElementById("live-channel") as HTMLInputElement;
+
   const row = document.getElementById("wl-mode")!;
   row.addEventListener("click", (e) => {
     const seg = (e.target as HTMLElement).closest<HTMLButtonElement>(".seg");
@@ -400,20 +436,47 @@ function bindWl() {
     // already typed in the (now visible) field.
     if (wlMode === "live") {
       applyLiveInput();
+      editingLive = false; // show the chip if a channel is already set
     } else {
       currentConfig.livePlatform = "";
       currentConfig.liveChannel = "";
     }
     trackLiveSelected();
     syncWlUi();
+    // If we dropped into the empty input, put the cursor there ready to paste.
+    if (wlMode === "live" && !liveField.hidden) liveField.focus();
     updateGeneratedUrl();
   });
 
-  const liveField = document.getElementById("live-channel") as HTMLInputElement;
+  // While the field is focused the user is editing, so keep the input visible.
+  liveField.addEventListener("focus", () => {
+    editingLive = true;
+  });
   liveField.addEventListener("input", () => {
     applyLiveInput();
     trackLiveSelected();
     updateGeneratedUrl();
+  });
+  // Leaving the field (blur) or pressing Enter collapses it into the chip once a
+  // valid channel is present.
+  liveField.addEventListener("blur", () => {
+    editingLive = false;
+    syncWlUi();
+  });
+  liveField.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      liveField.blur();
+    }
+  });
+
+  // The chip's pencil returns to the default input state so the link can be
+  // changed (its current value stays, selected, ready to overwrite).
+  document.getElementById("live-chip-edit")!.addEventListener("click", () => {
+    editingLive = true;
+    syncWlUi();
+    liveField.focus();
+    liveField.select();
   });
 }
 
@@ -536,6 +599,7 @@ function syncControlsFromConfig() {
   (document.getElementById("show-wl") as HTMLInputElement).checked =
     currentConfig.showWinLoss;
   wlMode = currentConfig.livePlatform ? "live" : "leetify";
+  editingLive = false; // a restored channel shows as a chip, not an open input
   (document.getElementById("live-channel") as HTMLInputElement).value =
     currentConfig.liveChannel;
   syncWlUi();
@@ -796,7 +860,7 @@ function init() {
         <div class="setup-head">
           <div class="brand-block">
             <h1 class="setup-title">CS2 Overlay Widget</h1>
-            <p class="setup-sub">Customize and use your own overlay widget for CS2. Paste your Twitch, YouTube, or Kick link to get a live-session W/L.</p>
+            <p class="setup-sub">Customize and use your own overlay widget for CS2. Paste your streaming profile (Twitch, YouTube, Kick) for live W/L.</p>
           </div>
           <div class="link-row">
             <a class="link-chip link-repo" data-link="github" href="${REPO_URL}" target="_blank" rel="noopener">${ICON_GITHUB}<span>cs2-stats-overlay</span></a>
@@ -868,7 +932,12 @@ function init() {
                   <button type="button" class="seg" data-mode="leetify">LEETIFY</button>
                   <button type="button" class="seg" data-mode="live">LIVE SESSION</button>
                 </div>
-                <input type="text" id="live-channel" class="field-input" placeholder="Twitch, YouTube, or Kick link" autocomplete="off" spellcheck="false" hidden>
+                <input type="text" id="live-channel" class="field-input" placeholder="Twitch/Youtube/Kick profile link" autocomplete="off" spellcheck="false" hidden>
+                <div class="live-chip" id="live-chip" hidden>
+                  <span class="live-chip-logo" id="live-chip-logo" aria-hidden="true"></span>
+                  <span class="live-chip-name" id="live-chip-name"></span>
+                  <button type="button" class="live-chip-edit" id="live-chip-edit" aria-label="Edit live channel">${ICON_PENCIL}</button>
+                </div>
               </div>
 
               <div class="check-group">

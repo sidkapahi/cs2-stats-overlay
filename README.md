@@ -79,7 +79,8 @@ You'll need your CS2 stats flowing into Leetify:
 2. Paste your **Steam profile link** or Steam64 ID (can be found on [SteamID I/O](https://steamid.io/))
 3. Toggle what to show — avatar, name, rank badge, rank change, stats, match history
 4. Set how many recent matches to show and how often it refreshes
-5. Copy the generated **widget URL** (or download the StreamElements bundle — see below)
+5. *(Optional)* For a per-stream win/loss, switch the Win/Loss source to **Live Session** and add a profile link (Twitch, YouTube, or Kick)
+6. Copy the generated **widget URL** (or download the StreamElements bundle — see below)
 
 ### Add it to OBS/Streamlabs OBS
 
