@@ -906,13 +906,13 @@ select.field-input {
   cursor: pointer;
   font-family: var(--font-ui);
   font-size: 12px;
-  color: #2f7bff;
+  color: var(--text-dim);
   text-decoration: underline;
   text-underline-offset: 2px;
-  transition: filter 0.15s ease;
+  transition: color 0.15s ease;
 }
 .foot-link:hover {
-  filter: brightness(1.15);
+  color: var(--text);
 }
 .foot-sep {
   color: var(--text-dim);
@@ -1139,11 +1139,13 @@ select.field-input {
   color: var(--text);
   font-weight: 700;
 }
+.modal-body a,
 .modal-mail {
   color: #2f7bff;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.modal-body a:hover,
 .modal-mail:hover {
   filter: brightness(1.15);
 }
