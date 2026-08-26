@@ -10,13 +10,14 @@ import {
   saveSession,
   type SessionState,
 } from '../shared/session';
-import { fetchTwitchLive, twitchLiveCheckAvailable } from '../shared/twitch';
+import { fetchLive, liveCheckAvailable } from '../shared/live';
 import './widget.css';
 
-// How often to check Twitch live status, independent of the (slower) stats
+// How often to check stream live status, independent of the (slower) stats
 // refresh. Matches finish every 30+ minutes so there's no point polling Leetify
-// fast, but we want a go-live / go-offline transition caught quickly. Twitch's
-// app-token Get Streams limit is 800/min, so 15s (4/min) is comfortably cheap.
+// fast, but we want a go-live / go-offline transition caught quickly. The proxy
+// Workers cache their upstream calls, so a 15s (4/min) poll stays cheap even on
+// YouTube's tight API quota.
 const LIVE_POLL_INTERVAL = 15;
 
 async function init() {
@@ -39,12 +40,15 @@ async function init() {
     </div></div></div>
   </div>`;
 
-  // Session-scoped W/L is active only when a Twitch login is set *and* the proxy
-  // that performs the live check is configured; otherwise the pills keep their
-  // default rolling-window behaviour.
-  const sessionMode = !!config.twitchLogin && twitchLiveCheckAvailable();
+  // Session-scoped W/L is active only when a live channel is set *and* that
+  // platform's proxy is configured; otherwise the pills keep their default
+  // rolling-window behaviour.
+  const sessionMode =
+    !!config.livePlatform &&
+    !!config.liveChannel &&
+    liveCheckAvailable(config.livePlatform);
   let sessionState: SessionState = sessionMode
-    ? loadSession(config.steamId, config.twitchLogin)
+    ? loadSession(config.steamId, config.livePlatform, config.liveChannel)
     : { live: false, preSessionIds: [], results: {} };
 
   // Overlay analytics: cookieless (no cookies, no storage, no consent banner on
@@ -52,7 +56,10 @@ async function init() {
   // sessions and fetch errors are tracked below. Cookieless means loads aren't
   // linked across sessions, so these are counts, not unique-user figures.
   initOverlayAnalytics();
-  trackOverlayEvent('overlay_active', { twitch: sessionMode });
+  trackOverlayEvent('overlay_active', {
+    live: sessionMode,
+    platform: sessionMode ? config.livePlatform : '',
+  });
   // Latest stats payload and latest known live status, updated by two separate
   // pollers and reconciled by render().
   let lastData: PremierData | null = null;
@@ -73,8 +80,10 @@ async function init() {
       // A false→true flip is a fresh stream session starting; count it once.
       // (An OBS source refresh reloads the persisted live=true state, so it
       // won't re-fire — we count real go-live transitions, not refreshes.)
-      if (!wasLive && sessionState.live) trackOverlayEvent('twitch_session_started');
-      saveSession(config.steamId, config.twitchLogin, sessionState);
+      if (!wasLive && sessionState.live) {
+        trackOverlayEvent('live_session_started', { platform: config.livePlatform });
+      }
+      saveSession(config.steamId, config.livePlatform, config.liveChannel, sessionState);
       const wl = readWinLoss(sessionState);
       if (wl.mode === 'session') {
         data = { ...lastData, wins: wl.wins, losses: wl.losses };
@@ -102,7 +111,7 @@ async function init() {
   }
 
   async function updateLive() {
-    const live = await fetchTwitchLive(config.twitchLogin);
+    const live = await fetchLive(config.livePlatform, config.liveChannel);
     // null means "unknown" (transient) — leave lastLive as-is so a blip can't be
     // misread as the stream ending.
     if (live !== null) lastLive = live;

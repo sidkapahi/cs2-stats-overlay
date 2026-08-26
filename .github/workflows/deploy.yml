@@ -29,10 +29,13 @@ jobs:
           # Not a secret, so a repository variable is the natural home, but a
           # secret with the same name works too.
           VITE_AVATAR_PROXY_URL: ${{ vars.VITE_AVATAR_PROXY_URL || secrets.VITE_AVATAR_PROXY_URL }}
-          # Public URL of the optional Twitch live-status proxy Worker (a separate
-          # Worker from the avatar proxy — see worker/README.md). Also not a
-          # secret, so a repository variable is the natural home.
+          # Public URLs of the optional live-status proxy Workers (one per
+          # platform — separate Workers from the avatar proxy, see
+          # worker/README.md). Also not secrets, so repository variables are the
+          # natural home. Any left unset disables that platform's live check.
           VITE_TWITCH_PROXY_URL: ${{ vars.VITE_TWITCH_PROXY_URL || secrets.VITE_TWITCH_PROXY_URL }}
+          VITE_YOUTUBE_PROXY_URL: ${{ vars.VITE_YOUTUBE_PROXY_URL || secrets.VITE_YOUTUBE_PROXY_URL }}
+          VITE_KICK_PROXY_URL: ${{ vars.VITE_KICK_PROXY_URL || secrets.VITE_KICK_PROXY_URL }}
           # PostHog analytics — the project key is a public, write-only
           # identifier, so a repository variable is the natural home (a secret
           # works too). VITE_POSTHOG_HOST selects the US/EU region.

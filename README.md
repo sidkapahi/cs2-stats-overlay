@@ -37,8 +37,9 @@ run, no account to make on this site.
 - **Rank-point change** from your last Premier match (e.g. `+250`)
 - **Win / loss pills** and core stats: win rate, aim rating, K/D
 - **Recent match-history strip** (W / L / T)
-- **Twitch session W/L** (optional) — resets when you go live, freezes when you
-  go offline, so it tracks *today's* stream instead of a rolling window
+- **Live session W/L** (optional, Twitch / YouTube / Kick) — resets when you go
+  live, freezes when you go offline, so it tracks *today's* stream instead of a
+  rolling window
 - **Transparent background** that sits on any layout
 
 Everything is toggleable, so you can run a minimal rating-only badge or the full
@@ -78,7 +79,8 @@ You'll need your CS2 stats flowing into Leetify:
 2. Paste your **Steam profile link** or Steam64 ID (can be found on [SteamID I/O](https://steamid.io/))
 3. Toggle what to show — avatar, name, rank badge, rank change, stats, match history
 4. Set how many recent matches to show and how often it refreshes
-5. Copy the generated **widget URL** (or download the StreamElements bundle — see below)
+5. *(Optional)* For a per-stream win/loss, switch the Win/Loss source to **Live Session** and add a profile link (Twitch, YouTube, or Kick)
+6. Copy the generated **widget URL** (or download the StreamElements bundle — see below)
 
 ### Add it to OBS/Streamlabs OBS
 
@@ -105,23 +107,23 @@ returning to the customizer.
 > the file set you paste into the Custom Widget editor, pre-filled to save you
 > the manual setup.
 
-### Twitch session win/loss (optional)
+### Live session win/loss (optional)
 
-By default the W/L pills tally every match in Leetify's recent window. Enter your
-**Twitch username** in the customizer and they become a **per-stream record**
-instead:
+By default the W/L pills tally every match in Leetify's recent window. Paste your
+**Twitch, YouTube, or Kick link** in the customizer and they become a
+**per-stream record** instead:
 
 - Resets to `W0 L0` when your channel **goes live**
 - Counts only matches finished **during that stream**
 - **Freezes** (keeping the last stream's record) when you go **offline**
 
-Your session is saved in the browser, so refreshing the OBS source mid-stream
-doesn't lose it. It only reads the **public** "is this channel live?" status —
-you never log in.
+The customizer detects the platform from the link automatically. Your session is
+saved in the browser, so refreshing the OBS source mid-stream doesn't lose it. It
+only reads the **public** "is this channel live?" status — you never log in.
 
-> This feature relies on a small proxy the project owner hosts. If it's not
-> available on the site you're using, the pills fall back to the normal
-> rolling-window behaviour.
+> This feature relies on a small proxy per platform that the project owner hosts.
+> If your platform's proxy isn't available on the site you're using, the pills
+> fall back to the normal rolling-window behaviour.
 
 ## Query Parameters
 
@@ -130,7 +132,8 @@ If you'd rather hand-craft the URL, the widget accepts these parameters:
 | Parameter    | Default | Description                        |
 | ------------ | ------- | ---------------------------------- |
 | `steamId`    | —       | Steam64 ID (required)              |
-| `twitch`     | —       | Twitch login → session-scoped W/L  |
+| `live`       | —       | `<platform>:<channel>` → session-scoped W/L (e.g. `twitch:kapowhi`, `youtube:@handle`, `kick:slug`) |
+| `twitch`     | —       | Legacy Twitch login (still accepted; equivalent to `live=twitch:<login>`) |
 | `avatar`     | `1`     | Show avatar (`0` to hide)          |
 | `name`       | `1`     | Show player name                   |
 | `badge`      | `1`     | Show rank badge (`0` for plain)    |

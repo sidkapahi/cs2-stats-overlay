@@ -1,0 +1,55 @@
+// Live-status lookup across streaming platforms, each via its own proxy Worker.
+//
+// Checking whether a channel is live needs credentials that can't live in a
+// browser (Twitch/Kick use a client id + secret; YouTube uses an API key), so a
+// small Cloudflare Worker per platform holds the secret, talks to the platform
+// API, and answers a single lookup: `GET {PROXY}?<param>=<channel>` → { live }.
+// The widget just picks the proxy for the configured platform and asks it.
+
+import type { LivePlatform } from './types';
+
+// Proxy Worker URL per platform, injected at build time. Any left unset simply
+// disables that platform's live check (the widget falls back to rolling W/L).
+const PROXIES: Record<LivePlatform, string | undefined> = {
+  twitch: import.meta.env.VITE_TWITCH_PROXY_URL as string | undefined,
+  youtube: import.meta.env.VITE_YOUTUBE_PROXY_URL as string | undefined,
+  kick: import.meta.env.VITE_KICK_PROXY_URL as string | undefined,
+};
+
+// Query-param name each Worker expects for the channel identifier.
+const PARAMS: Record<LivePlatform, string> = {
+  twitch: 'twitch',
+  youtube: 'youtube',
+  kick: 'kick',
+};
+
+// True when a live check can actually be performed for the given platform (its
+// proxy URL is configured). An empty platform is never available.
+export function liveCheckAvailable(platform: '' | LivePlatform): boolean {
+  return !!platform && !!PROXIES[platform];
+}
+
+// Resolves whether the given channel is currently live on the given platform.
+// Never throws: on a missing proxy, network error, or unexpected payload it
+// returns `null`, which the caller treats as "status unknown" and leaves the
+// session state untouched (so a transient blip can't be misread as the stream
+// ending).
+export async function fetchLive(
+  platform: '' | LivePlatform,
+  channel: string,
+): Promise<boolean | null> {
+  if (!platform || !channel) return null;
+  const proxy = PROXIES[platform];
+  if (!proxy) return null;
+  try {
+    const res = await fetch(
+      `${proxy}?${PARAMS[platform]}=${encodeURIComponent(channel)}`,
+      { cache: 'no-store' },
+    );
+    if (!res.ok) return null;
+    const body = (await res.json()) as { live?: unknown };
+    return typeof body.live === 'boolean' ? body.live : null;
+  } catch {
+    return null;
+  }
+}

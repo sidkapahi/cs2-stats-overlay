@@ -1,0 +1,9 @@
+# Cloudflare Worker config for the YouTube live-status proxy.
+#
+# Deploy:    wrangler deploy --config wrangler.youtube.toml
+# Add key:   wrangler secret put YOUTUBE_API_KEY --config wrangler.youtube.toml
+#            (never commit the key)
+
+name = "cs2-youtube-live-proxy"
+main = "youtube-live-proxy.js"
+compatibility_date = "2024-11-01"

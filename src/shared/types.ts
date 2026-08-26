@@ -102,13 +102,20 @@ export const STAT_LABELS: Record<StatKey, string> = {
 // The widget only has room for three stat columns, so the picker is capped here.
 export const STAT_MAX = 3;
 
+// Streaming platforms whose live status can drive session-scoped W/L. Each has
+// its own proxy Worker (see worker/), picked from the link the user pastes.
+export type LivePlatform = 'twitch' | 'youtube' | 'kick';
+
 export interface WidgetConfig {
   steamId: string;
-  // Twitch login (channel name, not the display name). When set, the W/L pills
-  // become session-scoped: they reset when the channel goes live and freeze
-  // (keeping the last session's record) when it goes offline. Empty = the old
-  // rolling-window W/L over recent matches.
-  twitchLogin: string;
+  // Live-session source. When a platform + channel are set, the W/L pills become
+  // session-scoped: they reset when the channel goes live and freeze (keeping the
+  // last session's record) when it goes offline. Empty platform = the old
+  // rolling-window W/L over recent matches. `liveChannel` is the normalized
+  // identifier that platform's proxy expects (a Twitch/Kick login, or a YouTube
+  // @handle / channel id).
+  livePlatform: '' | LivePlatform;
+  liveChannel: string;
   showAvatar: boolean;
   showName: boolean;
   showBadge: boolean;
@@ -131,7 +138,8 @@ export interface WidgetConfig {
 
 export const DEFAULT_CONFIG: WidgetConfig = {
   steamId: '',
-  twitchLogin: '',
+  livePlatform: '',
+  liveChannel: '',
   showAvatar: true,
   showName: true,
   showBadge: true,
