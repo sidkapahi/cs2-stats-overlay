@@ -100,11 +100,28 @@ events:
 - **Overlay** — has no posthog-js bundled, so it POSTs a hand-built `$exception`
   (via `trackOverlayException` in `analyticsOverlay.ts`) over the same cookieless
   path. Grouped by `reason` (`$exception_fingerprint: overlay:<reason>`), so each
-  failure class is one issue. Anonymous, no stack trace (minified prod).
+  failure class is one issue. Anonymous, no stack trace (minified prod). **Never
+  carries the Steam ID** — there's no consent on the overlay.
 - **Customizer** — uses posthog-js, so `capture_exceptions: true` autocaptures
   uncaught errors / unhandled rejections, and `captureException()` reports the
   caught buggy-reason failures. Consent-gated like everything else — nothing
   sends until the visitor accepts the banner.
+
+### The Steam-ID carve-out (customizer only)
+
+By the time a lookup is attempted, `parseSteamInput` has narrowed the input to a
+valid 17-digit Steam64 (or a vanity that resolved into one) — so for a
+`bad_response` / `other` failure the input *shape* is fixed and useless as a
+signal; only the actual value distinguishes a working ID from a failing one (a
+hash wouldn't help either — the Steam64 space is small and brute-forceable). So
+those customizer exception events attach the entered value (`steam_id`, or
+`steam_input` for the vanity at the resolve stage) to reproduce the exact
+failure.
+
+This is the **only** place the entered Steam ID is attached to analytics, and
+it's disclosed in the Privacy & Cookies notice. It's customizer-only (a human is
+present and has consented) and scoped to just these two reason codes — the
+overlay and every ordinary event stay ID-free.
 
 ---
 

@@ -246,8 +246,11 @@ async function resolveAndLoad(rawInput: string) {
         trackEvent("preview_error", { stage: "resolve", reason });
         // Only unexpected failures reach Error Tracking; a user typo
         // (vanity_not_found) or a real outage is a count, not a bug to triage.
+        // For those, include the exact input (here: the vanity) so the failing
+        // case can be reproduced — the one place we attach the entered value,
+        // disclosed in the Privacy & Cookies notice. Consent-gated.
         if (reason === "other" || reason === "bad_response")
-          captureException(e, { stage: "resolve", reason });
+          captureException(e, { stage: "resolve", reason, steam_input: parsed.vanity });
       }
       previewError = e instanceof Error ? e.message : "Failed to resolve";
       previewData = null;
@@ -295,8 +298,12 @@ async function loadPreview(token = ++resolveToken) {
     {
       const reason = classifyFetchError(e);
       trackEvent("preview_error", { stage: "stats", reason });
+      // For an unexpected failure on a *valid* Steam64, the ID is the only
+      // diagnostic (the input shape is fixed by parseSteamInput), so attach it
+      // to reproduce the exact failing case. Only here and only for these
+      // reasons — disclosed in the Privacy & Cookies notice, consent-gated.
       if (reason === "other" || reason === "bad_response")
-        captureException(e, { stage: "stats", reason });
+        captureException(e, { stage: "stats", reason, steam_id: currentConfig.steamId });
     }
     previewError = e instanceof Error ? e.message : "Failed to load";
     previewData = null;
@@ -755,12 +762,12 @@ function mountConsentUi() {
             <li>Which widget settings you build (fonts, stats, colors, and so on)</li>
             <li>When you copy the widget URL or export the ZIP</li>
             <li>Clicks on the GitHub, Ko-fi, and Twitch links</li>
-            <li>Errors, so broken states can be found and fixed</li>
+            <li>Errors, so broken states can be found and fixed. If a stats lookup fails unexpectedly, the Steam ID or profile handle involved may be included in that one error report so the exact failure can be reproduced and fixed — nothing else attaches your ID to analytics</li>
           </ul>
 
           <h3>What we do NOT collect</h3>
           <ul>
-            <li>Your Steam ID is never attached to analytics</li>
+            <li>Your Steam ID isn't tied to normal usage analytics — only to an error report when a lookup fails, as noted above</li>
             <li>No session recording, no keystrokes, no personal profiles</li>
             <li>We don't sell or share your data</li>
           </ul>
