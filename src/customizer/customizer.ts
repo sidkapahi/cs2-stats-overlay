@@ -1037,9 +1037,11 @@ function init() {
         <div class="setup-foot">
           <img class="foot-logo" src="${brandLogoSrc}" alt="kapKit">
           <span class="foot-tag">Made with ❤️ in Toronto</span>
-          <button type="button" class="foot-link" id="open-privacy">Privacy &amp; Cookies</button>
-          <span class="foot-sep" aria-hidden="true">·</span>
-          <button type="button" class="foot-link" id="open-tos">Terms of Service</button>
+          <div class="foot-legal">
+            <button type="button" class="foot-link" id="open-privacy">Privacy &amp; Cookies</button>
+            <span class="foot-sep" aria-hidden="true">·</span>
+            <button type="button" class="foot-link" id="open-tos">Terms of Service</button>
+          </div>
         </div>
       </aside>
 

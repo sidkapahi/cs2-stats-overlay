@@ -893,7 +893,12 @@ select.field-input {
   }
 }
 
-/* ---- Footer privacy link ------------------------------------------------ */
+/* ---- Footer legal links -------------------------------------------------- */
+.foot-legal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .foot-link {
   background: none;
   border: none;
@@ -901,13 +906,13 @@ select.field-input {
   cursor: pointer;
   font-family: var(--font-ui);
   font-size: 12px;
-  color: var(--text-dim);
+  color: #2f7bff;
   text-decoration: underline;
   text-underline-offset: 2px;
-  transition: color 0.15s ease;
+  transition: filter 0.15s ease;
 }
 .foot-link:hover {
-  color: var(--text);
+  filter: brightness(1.15);
 }
 .foot-sep {
   color: var(--text-dim);
