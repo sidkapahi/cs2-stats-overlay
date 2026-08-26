@@ -55,6 +55,21 @@ export function classifyFetchError(e: unknown): string {
   if (/No Premier rank/i.test(msg)) return 'no_premier';
   if (/recognise that custom URL|recognize that custom URL/i.test(msg)) return 'vanity_not_found';
   if (/reach the Steam resolver|resolve custom URL|need the Steam proxy/i.test(msg)) return 'resolver_error';
+  // A rejected fetch() surfaces as a TypeError whose message varies by engine
+  // (Chrome "Failed to fetch", Firefox "NetworkError…", Safari "Load failed") and
+  // carries no HTTP status — the request never reached Leetify. This is a
+  // client-side connectivity blip, not a Leetify outage, so keep it out of the
+  // catch-all `other` bucket where a real problem would hide.
+  if (e instanceof TypeError && /failed to fetch|networkerror|network request failed|load failed/i.test(msg)) {
+    return 'network_error';
+  }
+  // A 200 with a body we can't use: res.json() throws a SyntaxError on non-JSON,
+  // or reading a missing field (e.g. data.ranks) throws a property-access
+  // TypeError. The request reached Leetify but the payload was malformed or
+  // unexpected — distinct from a network drop, and worth watching separately.
+  if (e instanceof SyntaxError || /JSON|Unexpected token|Unexpected end of|Cannot read propert/i.test(msg)) {
+    return 'bad_response';
+  }
   return 'other';
 }
 

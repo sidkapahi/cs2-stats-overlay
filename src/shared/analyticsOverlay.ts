@@ -24,7 +24,10 @@ export function initOverlayAnalytics() {
   distinctId = crypto.randomUUID?.() ?? `anon-${Math.random().toString(36).slice(2)}`;
 }
 
-export function trackOverlayEvent(event: string, props?: Props) {
+// Low-level cookieless capture. Properties are loosely typed so structured
+// PostHog payloads (e.g. $exception_list, an array of objects) can pass through;
+// trackOverlayEvent keeps the strict Props signature for ordinary count events.
+function capture(event: string, properties: Record<string, unknown>) {
   if (!ENABLED || !distinctId) return;
   try {
     const body = JSON.stringify({
@@ -32,7 +35,7 @@ export function trackOverlayEvent(event: string, props?: Props) {
       event,
       distinct_id: distinctId,
       // Keep these events anonymous — never create a PostHog person profile.
-      properties: { ...props, $process_person_profile: false },
+      properties: { ...properties, $process_person_profile: false },
     });
     // keepalive so an event fired right as the source reloads still sends.
     void fetch(`${POSTHOG_HOST}/capture/`, {
@@ -44,4 +47,31 @@ export function trackOverlayEvent(event: string, props?: Props) {
   } catch {
     // analytics must never break the overlay
   }
+}
+
+export function trackOverlayEvent(event: string, props?: Props) {
+  capture(event, { ...props });
+}
+
+// Report a genuinely-unexpected overlay failure to PostHog Error Tracking as a
+// `$exception` event, sent over the same cookieless path (no SDK bundled). Only
+// used for the buggy reason codes (`other`, `bad_response`) — expected outages
+// like api_5xx or no_premier stay plain overlay_error counts and never clutter
+// the Issues list. Grouped by `reason` via $exception_fingerprint so each
+// failure class is one issue, not one-per-browser-message. Anonymous, and can't
+// carry a stack trace worth reading (minified prod, no source maps uploaded) —
+// the type/value pair is the useful signal.
+export function trackOverlayException(error: unknown, reason: string) {
+  const err = error instanceof Error ? error : new Error(String(error));
+  capture("$exception", {
+    reason,
+    $exception_fingerprint: `overlay:${reason}`,
+    $exception_list: [
+      {
+        type: err.name || "Error",
+        value: err.message || String(error),
+        mechanism: { handled: true, synthetic: false },
+      },
+    ],
+  });
 }

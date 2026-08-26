@@ -61,7 +61,28 @@ export function initAnalytics() {
     persistence: "localStorage+cookie",
     opt_out_capturing_by_default: true, // gated on banner consent
   };
+  // Error Tracking: let posthog-js autocapture uncaught errors and unhandled
+  // promise rejections in the customizer UI, so genuine JS bugs surface in
+  // PostHog's Issues list instead of failing silently. Still consent-gated —
+  // opt_out_capturing_by_default means nothing (exceptions included) sends until
+  // the visitor accepts. Assigned loosely-typed so the build doesn't depend on
+  // the exact posthog-js minor exposing this key in PostHogConfig.
+  (config as Record<string, unknown>).capture_exceptions = true;
   posthog.init(POSTHOG_KEY, config);
+}
+
+// Manually report a caught error to PostHog Error Tracking. Use for failures we
+// handle (so they don't reach the autocapture handlers) but that still indicate
+// a bug worth triaging — as opposed to expected outages, which stay plain
+// named-event counts. No-op until analytics is started and consent is granted.
+export function captureException(error: unknown, props?: Props) {
+  if (!ENABLED || !started) return;
+  try {
+    const err = error instanceof Error ? error : new Error(String(error));
+    posthog.captureException(err, props);
+  } catch {
+    // analytics must never break the app
+  }
 }
 
 export function trackEvent(event: string, props?: Props) {

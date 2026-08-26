@@ -1,4 +1,4 @@
-import { initOverlayAnalytics, trackOverlayEvent } from '../shared/analyticsOverlay';
+import { initOverlayAnalytics, trackOverlayEvent, trackOverlayException } from '../shared/analyticsOverlay';
 import { classifyFetchError, fetchPremierData, type PremierData } from '../shared/api';
 import { paramsToConfig } from '../shared/config';
 import { loadFont } from '../shared/fonts';
@@ -100,7 +100,14 @@ async function init() {
     } catch (e) {
       // Fire once per outage episode (on the healthy→failing transition), so a
       // sustained outage doesn't emit an event on every refresh.
-      if (statsHealthy) trackOverlayEvent('overlay_error', { reason: classifyFetchError(e) });
+      if (statsHealthy) {
+        const reason = classifyFetchError(e);
+        trackOverlayEvent('overlay_error', { reason });
+        // Route only the genuinely-unexpected failures into Error Tracking: a
+        // malformed payload or an uncategorized error is a code bug to triage,
+        // whereas an outage or an expected user state is just a count.
+        if (reason === 'other' || reason === 'bad_response') trackOverlayException(e, reason);
+      }
       statsHealthy = false;
       // Keep the last good render if we already have one; only show the error
       // state on the very first failure.

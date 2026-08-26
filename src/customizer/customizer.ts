@@ -1,5 +1,6 @@
 import {
   analyticsEnabled,
+  captureException,
   consentDecided,
   consentStatus,
   grantConsent,
@@ -240,7 +241,14 @@ async function resolveAndLoad(rawInput: string) {
       steamId = await resolveVanityUrl(parsed.vanity);
     } catch (e) {
       if (token !== resolveToken) return; // superseded by newer input
-      trackEvent("preview_error", { stage: "resolve", reason: classifyFetchError(e) });
+      {
+        const reason = classifyFetchError(e);
+        trackEvent("preview_error", { stage: "resolve", reason });
+        // Only unexpected failures reach Error Tracking; a user typo
+        // (vanity_not_found) or a real outage is a count, not a bug to triage.
+        if (reason === "other" || reason === "bad_response")
+          captureException(e, { stage: "resolve", reason });
+      }
       previewError = e instanceof Error ? e.message : "Failed to resolve";
       previewData = null;
       previewLoading = false;
@@ -284,7 +292,12 @@ async function loadPreview(token = ++resolveToken) {
     }
   } catch (e) {
     if (token !== resolveToken) return; // superseded by newer input
-    trackEvent("preview_error", { stage: "stats", reason: classifyFetchError(e) });
+    {
+      const reason = classifyFetchError(e);
+      trackEvent("preview_error", { stage: "stats", reason });
+      if (reason === "other" || reason === "bad_response")
+        captureException(e, { stage: "stats", reason });
+    }
     previewError = e instanceof Error ? e.message : "Failed to load";
     previewData = null;
   }

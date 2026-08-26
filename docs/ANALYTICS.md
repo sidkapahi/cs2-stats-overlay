@@ -81,7 +81,30 @@ Attached as `reason` on `preview_error` and `overlay_error`:
 | `no_premier` | The profile has no Premier data | No — expected user state, not a bug |
 | `vanity_not_found` | A custom `/id/` vanity URL didn't resolve | No — user typo |
 | `resolver_error` | The Steam vanity-resolver proxy is unreachable/misconfigured | Yes — check the Worker |
-| `other` | Anything uncategorized | Investigate |
+| `network_error` | The `fetch()` itself failed (dropped connection, DNS, CORS, timeout) — no HTTP status, request never reached Leetify | Usually no — a client-side connectivity blip; watch the *rate*, not one event |
+| `bad_response` | Leetify returned 200 but the body was unparseable or an unexpected shape | Yes — a bug or a Leetify payload change |
+| `other` | Anything uncategorized | Yes — investigate |
+
+## Error Tracking (PostHog Issues)
+
+Most reason codes are *operational counts* — an outage (`api_5xx`), throttling
+(`api_rate_limited`), or an expected user state (`no_premier`, `vanity_not_found`)
+is something to measure, not a code bug to triage. Those stay plain
+`overlay_error` / `preview_error` events and never enter the Issues list.
+
+The two reasons that mean *our code hit something it didn't expect* — `other`
+and `bad_response` — are **additionally** reported to
+[PostHog Error Tracking](https://posthog.com/docs/error-tracking) as `$exception`
+events:
+
+- **Overlay** — has no posthog-js bundled, so it POSTs a hand-built `$exception`
+  (via `trackOverlayException` in `analyticsOverlay.ts`) over the same cookieless
+  path. Grouped by `reason` (`$exception_fingerprint: overlay:<reason>`), so each
+  failure class is one issue. Anonymous, no stack trace (minified prod).
+- **Customizer** — uses posthog-js, so `capture_exceptions: true` autocaptures
+  uncaught errors / unhandled rejections, and `captureException()` reports the
+  caught buggy-reason failures. Consent-gated like everything else — nothing
+  sends until the visitor accepts the banner.
 
 ---
 
