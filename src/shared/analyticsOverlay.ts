@@ -22,6 +22,22 @@ let distinctId = "";
 export function initOverlayAnalytics() {
   if (!ENABLED || distinctId || typeof window === "undefined") return;
   distinctId = crypto.randomUUID?.() ?? `anon-${Math.random().toString(36).slice(2)}`;
+
+  // The overlay bundles no posthog-js, so nothing autocaptures crashes for us.
+  // Install our own global handlers so a render/init failure or a stray
+  // rejection still reaches Error Tracking — not just the stats-fetch errors
+  // that widget.ts reports explicitly. Stays cookieless, anonymous, ID-free.
+  // (fetchLive never throws, so live-check blips can't add noise here.)
+  window.addEventListener("error", (ev) => {
+    trackOverlayException(ev.error ?? new Error(ev.message || "Uncaught error"), "uncaught");
+  });
+  window.addEventListener("unhandledrejection", (ev) => {
+    const reason = ev.reason;
+    trackOverlayException(
+      reason instanceof Error ? reason : new Error(String(reason)),
+      "unhandled_rejection",
+    );
+  });
 }
 
 // Low-level cookieless capture. Properties are loosely typed so structured
