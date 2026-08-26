@@ -116,6 +116,40 @@ acquisition/referrers, so it's usually worth keeping.
 
 ---
 
+## Reverse proxy (optional)
+
+PostHog's **Installation health → Reverse proxy** check flags that events go
+straight to `us.i.posthog.com`, a host ad/tracking blockers block — so some
+visitors' events never arrive. Routing analytics through a subdomain of **your
+own** domain fixes it: blockers see same-origin requests and leave them alone.
+
+The simplest way is PostHog's own **Managed reverse proxy** (Settings → project
+→ *Managed reverse proxy*) — PostHog hosts it and handles TLS; you just add a
+CNAME. No Worker needed.
+
+1. **Add a generic subdomain** in PostHog, e.g. `t.kapkit.ca`. **Do not** use
+   `ph.`, `posthog.`, or `analytics.` — those are themselves on blocklists and
+   defeat the purpose (PostHog warns about this on that screen).
+2. **Add the CNAME** PostHog gives you in Cloudflare DNS, set to **DNS-only
+   (grey cloud)** — PostHog terminates TLS, so it must *not* be Cloudflare-
+   proxied. Wait for its status to go green.
+3. **Point the app at it** via the repository **variable**
+   `VITE_POSTHOG_HOST = https://t.kapkit.ca` (a bare subdomain, **no path**;
+   see [`.env.example`](../.env.example)). Re-run the deploy workflow so the new
+   host is baked into the bundle.
+
+Both surfaces pick this up automatically: the customizer's `posthog-js`
+(`api_host`) and the cookieless overlay (which POSTs to `${host}/capture/`).
+[`analytics.ts`](../src/shared/analytics.ts) also detects the custom host and
+sets PostHog's `ui_host`, so the customizer's toolbar / "open in PostHog" links
+still reach the real app. **EU forks:** set that `ui_host` to
+`https://eu.posthog.com`.
+
+To undo, clear `VITE_POSTHOG_HOST` (it falls back to `us.i.posthog.com`) and
+remove the managed-proxy domain + CNAME.
+
+---
+
 ## Where things live
 
 | File | Role |
@@ -125,4 +159,4 @@ acquisition/referrers, so it's usually worth keeping.
 | [`src/customizer/customizer.ts`](../src/customizer/customizer.ts) | Fires the customizer events + the consent banner/modal |
 | [`src/widget/widget.ts`](../src/widget/widget.ts) | Fires the overlay events |
 
-_Last updated: 2026-08-25._
+_Last updated: 2026-08-26._

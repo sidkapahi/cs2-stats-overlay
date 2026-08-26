@@ -198,3 +198,10 @@ the lookup returns `501 { "error": … }` (the widget then falls back to the nor
 rolling-window W/L). The Twitch and Kick responses are never cached, since live
 status changes; the YouTube Worker caches at the edge for ~60s to protect its
 API quota (see the YouTube section above).
+
+---
+
+> **Analytics reverse proxy?** PostHog's "Reverse proxy" health check is handled
+> **without a Worker** — via PostHog's own free **Managed reverse proxy** (just a
+> CNAME on a generic subdomain). See
+> [`docs/ANALYTICS.md`](../docs/ANALYTICS.md#reverse-proxy-optional).
