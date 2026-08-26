@@ -42,15 +42,17 @@ and never reaches the browser. Skip this and the widget still runs — just with
 avatars, and custom-URL links must be entered as a Steam64 ID or a `/profiles/…`
 link instead.
 
-## Optional: Twitch live-status (second Cloudflare Worker)
+## Optional: live-status proxies (Twitch / YouTube / Kick)
 
-The Twitch session W/L feature uses a **second** Cloudflare Worker
-(`worker/twitch-live-proxy.js`, separate from the avatar proxy so the credentials
-live apart). Register a Twitch app, deploy the Worker with your
-`TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` as secrets, and point the site at it
-with `VITE_TWITCH_PROXY_URL`. Full steps in
-[worker/README.md](../worker/README.md#twitch-live-status-proxy-cloudflare-worker).
-Without it, the pills keep their normal rolling-window behaviour.
+The live-session W/L feature uses a **separate Cloudflare Worker per platform**
+(`worker/twitch-live-proxy.js`, `youtube-live-proxy.js`, `kick-live-proxy.js`, so
+each platform's credentials live apart). The customizer detects the platform from
+the link the user pastes and routes to that Worker; **deploy only the platforms
+you want**. Point the site at each with `VITE_TWITCH_PROXY_URL`,
+`VITE_YOUTUBE_PROXY_URL`, and `VITE_KICK_PROXY_URL`. Full per-platform steps
+(Twitch app, YouTube API key + quota note, Kick app) are in
+[worker/README.md](../worker/README.md#live-status-proxies-cloudflare-workers).
+Without any of them, the pills keep their normal rolling-window behaviour.
 
 ## Optional: analytics (PostHog)
 
@@ -80,6 +82,8 @@ runs PostHog **cookieless** (no cookies, no storage, no consent banner on stream
 | `VITE_LEETIFY_KEY`        | No       | Leetify Public API key — raises rate limits (secret)      |
 | `VITE_AVATAR_PROXY_URL`   | No       | Steam avatar / custom-link proxy Worker URL (public)      |
 | `VITE_TWITCH_PROXY_URL`   | No       | Twitch live-status proxy Worker URL (public)              |
+| `VITE_YOUTUBE_PROXY_URL`  | No       | YouTube live-status proxy Worker URL (public)             |
+| `VITE_KICK_PROXY_URL`     | No       | Kick live-status proxy Worker URL (public)                |
 | `VITE_POSTHOG_KEY`        | No       | PostHog project API key for analytics (public)            |
 | `VITE_POSTHOG_HOST`       | No       | PostHog API host / region (default US)                    |
 
@@ -91,7 +95,7 @@ See [`.env.example`](../.env.example) for details on each.
 src/customizer/   Customizer UI (build & preview widget URLs)
 src/widget/       The overlay itself (rendered in OBS / browser source)
 src/shared/       API client, rank logic, rendering, session, export helpers
-worker/           Optional Cloudflare Workers (avatar + Twitch proxies)
+worker/           Optional Cloudflare Workers (avatar + Twitch/YouTube/Kick live proxies)
 public/           Static assets (fonts, CNAME)
 docs/             This guide + the analytics event reference
 ```
@@ -103,7 +107,7 @@ docs/             This guide + the analytics event reference
 | [TypeScript](https://www.typescriptlang.org) | Application logic |
 | [Vite](https://vitejs.dev) | Multi-page build & dev server |
 | [Leetify API](https://leetify.com) | Live CS2 stats & match data |
-| [Cloudflare Workers](https://workers.cloudflare.com) | Optional avatar + Twitch live-status proxies |
+| [Cloudflare Workers](https://workers.cloudflare.com) | Optional avatar + Twitch/YouTube/Kick live-status proxies |
 | [PostHog](https://posthog.com) | Optional product analytics (consent-gated) |
 
 ## Contributing

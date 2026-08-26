@@ -19,8 +19,8 @@ Two kinds of events show up in PostHog:
   events**. We didn't write these; PostHog's library sends them. See
   [PostHog automatic events](#posthog-automatic-events).
 
-Nothing is sent with the Steam ID. The Twitch **channel** (a public handle) is
-the only identifying value we attach anywhere.
+Nothing is sent with the Steam ID. The live **channel** (a public Twitch,
+YouTube, or Kick handle) is the only identifying value we attach anywhere.
 
 ---
 
@@ -29,7 +29,7 @@ the only identifying value we attach anywhere.
 | Event | Fires when | Properties |
 | --- | --- | --- |
 | `steam_id_entered` | A typed Steam ID / profile link successfully resolves | — |
-| `twitch_selected` | A valid Twitch channel is entered (once per new channel) | `channel` — the public Twitch handle |
+| `live_selected` | A valid live channel is entered (once per new channel) | `platform` — `twitch` \| `youtube` \| `kick`; `channel` — the public handle |
 | `social_click` | A header link is clicked | `target` — `github` \| `kofi` \| `twitch` |
 | `preview_error` | The live preview fails to load | `stage` — `resolve` \| `stats`; `reason` — see [reason codes](#error-reason-codes) |
 | `widget_url_copied` | "Copy URL" is clicked | the [settings properties](#settings-properties) |
@@ -39,8 +39,8 @@ the only identifying value we attach anywhere.
 
 | Event | Fires when | Properties |
 | --- | --- | --- |
-| `overlay_active` | The overlay loads in OBS (once per load) | `twitch` — `true` if Twitch session mode is on |
-| `twitch_session_started` | The stream goes live and a new W/L session begins (once per go-live; an OBS refresh doesn't re-count) | — |
+| `overlay_active` | The overlay loads in OBS (once per load) | `live` — `true` if a live session is active; `platform` — `twitch` \| `youtube` \| `kick` \| `''` |
+| `live_session_started` | The stream goes live and a new W/L session begins (once per go-live; an OBS refresh doesn't re-count) | `platform` — the live platform |
 | `overlay_error` | A stats fetch fails — fires **once per outage episode**, not every poll | `reason` — see [reason codes](#error-reason-codes) |
 
 > The overlay is cookieless, so each load looks like a new anonymous visitor.
@@ -65,7 +65,8 @@ someone built:
 | `showChange` | Rating-change indicator on/off |
 | `matchCount` | How many recent matches are considered |
 | `bgOpacity` | Background opacity (0–100) |
-| `usesTwitch` | `true` if a Twitch channel is set (the channel itself is **not** in these events) |
+| `usesLive` | `true` if a live channel is set (the channel itself is **not** in these events) |
+| `livePlatform` | The live platform (`twitch` \| `youtube` \| `kick`), or `''` when no live session |
 
 ## Error reason codes
 

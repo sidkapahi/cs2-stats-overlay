@@ -1,10 +1,10 @@
-// Session-scoped Win/Loss tracking, driven by Twitch live status.
+// Session-scoped Win/Loss tracking, driven by stream live status.
 //
 // The default W/L pills tally every match in Leetify's recent window. When a
-// Twitch channel is configured we instead want a *per-stream* record: it resets
-// to 0-0 when the channel goes live, counts only matches finished during that
-// stream, and freezes (keeping the last stream's record) once the channel goes
-// offline.
+// live channel (Twitch/YouTube/Kick) is configured we instead want a *per-stream*
+// record: it resets to 0-0 when the channel goes live, counts only matches
+// finished during that stream, and freezes (keeping the last stream's record)
+// once the channel goes offline.
 //
 // Leetify's `recent_matches` is a rolling window, so a naive "current total
 // minus a snapshot total" undercounts a long session as early games fall out of
@@ -31,7 +31,7 @@ export interface SessionWinLoss {
   losses: number;
   live: boolean;
   // 'session' → show these session numbers; 'fallback' → no session has begun
-  // yet (Twitch never seen live and nothing counted), so the caller should show
+  // yet (channel never seen live and nothing counted), so the caller should show
   // the normal rolling-window W/L instead of an empty 0-0.
   mode: 'session' | 'fallback';
 }
@@ -95,15 +95,15 @@ export function readWinLoss(state: SessionState): SessionWinLoss {
   return { wins, losses, live: state.live, mode };
 }
 
-function storageKey(steamId: string, login: string): string {
-  return `${STORAGE_PREFIX}:${steamId}:${login}`;
+function storageKey(steamId: string, platform: string, channel: string): string {
+  return `${STORAGE_PREFIX}:${steamId}:${platform}:${channel}`;
 }
 
-// Loads the stored session for this steamId+login. Any read failure (private
-// mode, cleared storage, corrupt JSON) yields a clean empty session.
-export function loadSession(steamId: string, login: string): SessionState {
+// Loads the stored session for this steamId + live channel. Any read failure
+// (private mode, cleared storage, corrupt JSON) yields a clean empty session.
+export function loadSession(steamId: string, platform: string, channel: string): SessionState {
   try {
-    const raw = localStorage.getItem(storageKey(steamId, login));
+    const raw = localStorage.getItem(storageKey(steamId, platform, channel));
     if (!raw) return emptyState();
     const parsed = JSON.parse(raw) as Partial<SessionState>;
     return {
@@ -118,9 +118,14 @@ export function loadSession(steamId: string, login: string): SessionState {
 
 // Persists the session. Best-effort: storage may be unavailable or full, in
 // which case the session simply won't survive a refresh — never an error.
-export function saveSession(steamId: string, login: string, state: SessionState): void {
+export function saveSession(
+  steamId: string,
+  platform: string,
+  channel: string,
+  state: SessionState,
+): void {
   try {
-    localStorage.setItem(storageKey(steamId, login), JSON.stringify(state));
+    localStorage.setItem(storageKey(steamId, platform, channel), JSON.stringify(state));
   } catch {
     // ignore: session persistence is a convenience, not a requirement
   }

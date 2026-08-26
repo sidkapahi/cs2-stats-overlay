@@ -16,7 +16,7 @@ import {
 import { brandLogoSrc } from "../shared/brandLogo";
 import {
   configToParams,
-  normalizeTwitchLogin,
+  parseLiveInput,
   settingsFingerprint,
 } from "../shared/config";
 import { downloadOverlayZip } from "../shared/export";
@@ -86,7 +86,8 @@ function configEventProps(
     showChange: config.showChange,
     matchCount: config.matchCount,
     bgOpacity: config.bgOpacity,
-    usesTwitch: Boolean(config.twitchLogin),
+    usesLive: Boolean(config.livePlatform),
+    livePlatform: config.livePlatform,
   };
 }
 let previewData: PremierData | null = null;
@@ -94,13 +95,13 @@ let previewError: string | null = null;
 let previewLoading = false;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let lastTrackedSteamId: string | null = null;
-// Last Twitch login we counted, so adopting a channel fires one adoption event
-// (not one per keystroke). The login itself is never sent — just the count.
-let lastTrackedTwitch = "";
-// Which source drives the W/L pills: 'leetify' = rolling window, 'twitch' =
-// per-stream session (reveals the Twitch username field). Mirrors whether a
-// Twitch login is set on the config.
-let wlMode: "leetify" | "twitch" = "leetify";
+// Last live channel we counted, so adopting a channel fires one adoption event
+// (not one per keystroke).
+let lastTrackedLive = "";
+// Which source drives the W/L pills: 'leetify' = rolling window, 'live' =
+// per-stream session (reveals the live-channel field). Mirrors whether a live
+// channel is set on the config.
+let wlMode: "leetify" | "live" = "leetify";
 // Bumped on every new resolve so a slow vanity lookup that finishes after the
 // user has typed something else can't overwrite the newer input's result.
 let resolveToken = 0;
@@ -341,28 +342,42 @@ function bindStats() {
   });
 }
 
-// ---- Win/Loss source toggle (Leetify vs Twitch session) -------------------
+// ---- Win/Loss source toggle (Leetify vs live session) ---------------------
 function syncWlUi() {
   const on = currentConfig.showWinLoss;
   const row = document.getElementById("wl-mode")!;
-  // Hide the Leetify/Twitch source picker entirely when W/L is off — the sub-
+  // Hide the Leetify/Live source picker entirely when W/L is off — the sub-
   // options only belong in the list when their parent is on.
   row.hidden = !on;
   for (const seg of row.querySelectorAll<HTMLButtonElement>(".seg")) {
     seg.classList.toggle("selected", seg.dataset.mode === wlMode);
     seg.disabled = !on;
   }
-  const twitchField = document.getElementById("twitch-login") as HTMLInputElement;
-  twitchField.hidden = !(on && wlMode === "twitch");
+  const liveField = document.getElementById("live-channel") as HTMLInputElement;
+  liveField.hidden = !(on && wlMode === "live");
 }
 
-// Fires one `twitch_selected` event the first time a valid channel is adopted
-// (and again if it's changed to a different valid one), tagged with the channel
-// so you can see which channels use it. The login is a public Twitch handle.
-function trackTwitchSelected(login: string) {
-  if (login && login !== lastTrackedTwitch) {
-    lastTrackedTwitch = login;
-    trackEvent("twitch_selected", { channel: login });
+// Reads the live-channel input, detects the platform, and writes the parsed
+// result onto the config. Returns the config's channel (or '' if unusable).
+function applyLiveInput(): string {
+  const liveField = document.getElementById("live-channel") as HTMLInputElement;
+  const parsed = parseLiveInput(liveField.value);
+  currentConfig.livePlatform = parsed?.platform ?? "";
+  currentConfig.liveChannel = parsed?.channel ?? "";
+  return currentConfig.liveChannel;
+}
+
+// Fires one `live_selected` event the first time a valid channel is adopted (and
+// again if it's changed to a different one), tagged with the platform and the
+// channel (a public handle) so you can see which channels use it.
+function trackLiveSelected() {
+  const key = `${currentConfig.livePlatform}:${currentConfig.liveChannel}`;
+  if (currentConfig.liveChannel && key !== lastTrackedLive) {
+    lastTrackedLive = key;
+    trackEvent("live_selected", {
+      platform: currentConfig.livePlatform,
+      channel: currentConfig.liveChannel,
+    });
   }
 }
 
@@ -380,21 +395,24 @@ function bindWl() {
   row.addEventListener("click", (e) => {
     const seg = (e.target as HTMLElement).closest<HTMLButtonElement>(".seg");
     if (!seg || seg.disabled) return;
-    wlMode = seg.dataset.mode === "twitch" ? "twitch" : "leetify";
-    const twitchField = document.getElementById("twitch-login") as HTMLInputElement;
-    // Leetify mode drops the Twitch login entirely; Twitch mode adopts whatever
-    // is already typed in the (now visible) field.
-    currentConfig.twitchLogin =
-      wlMode === "twitch" ? normalizeTwitchLogin(twitchField.value) : "";
-    trackTwitchSelected(currentConfig.twitchLogin);
+    wlMode = seg.dataset.mode === "live" ? "live" : "leetify";
+    // Leetify mode drops the live channel entirely; Live mode adopts whatever is
+    // already typed in the (now visible) field.
+    if (wlMode === "live") {
+      applyLiveInput();
+    } else {
+      currentConfig.livePlatform = "";
+      currentConfig.liveChannel = "";
+    }
+    trackLiveSelected();
     syncWlUi();
     updateGeneratedUrl();
   });
 
-  const twitchField = document.getElementById("twitch-login") as HTMLInputElement;
-  twitchField.addEventListener("input", () => {
-    currentConfig.twitchLogin = normalizeTwitchLogin(twitchField.value);
-    trackTwitchSelected(currentConfig.twitchLogin);
+  const liveField = document.getElementById("live-channel") as HTMLInputElement;
+  liveField.addEventListener("input", () => {
+    applyLiveInput();
+    trackLiveSelected();
     updateGeneratedUrl();
   });
 }
@@ -517,9 +535,9 @@ function syncControlsFromConfig() {
 
   (document.getElementById("show-wl") as HTMLInputElement).checked =
     currentConfig.showWinLoss;
-  wlMode = currentConfig.twitchLogin ? "twitch" : "leetify";
-  (document.getElementById("twitch-login") as HTMLInputElement).value =
-    currentConfig.twitchLogin;
+  wlMode = currentConfig.livePlatform ? "live" : "leetify";
+  (document.getElementById("live-channel") as HTMLInputElement).value =
+    currentConfig.liveChannel;
   syncWlUi();
 
   const search = document.getElementById("font-search") as HTMLInputElement;
@@ -642,7 +660,7 @@ function mountConsentUi() {
           <button type="button" class="modal-close" id="privacy-close" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="modal-updated">Last updated: 2026-08-25</p>
+          <p class="modal-updated">Last updated: 2026-08-26</p>
           <p>kapKit's CS2 overlay customizer uses <strong>PostHog</strong>, a privacy-friendly analytics service, to understand how the tool is used so it can be improved. We keep this to a minimum and never sell your data.</p>
 
           <h3>What we collect on the customizer</h3>
@@ -650,7 +668,7 @@ function mountConsentUi() {
           <ul>
             <li>Pages viewed, and where you arrived from (referrer / UTM tags)</li>
             <li>That a Steam ID was entered — <strong>not the ID itself</strong></li>
-            <li>The Twitch channel you enter (a public handle), if you use Twitch mode</li>
+            <li>The live channel you enter (a public Twitch, YouTube, or Kick handle) and which platform it is, if you use a live session</li>
             <li>Which widget settings you build (fonts, stats, colors, and so on)</li>
             <li>When you copy the widget URL or export the ZIP</li>
             <li>Clicks on the GitHub, Ko-fi, and Twitch links</li>
@@ -663,6 +681,9 @@ function mountConsentUi() {
             <li>No session recording, no keystrokes, no personal profiles</li>
             <li>We don't sell or share your data</li>
           </ul>
+
+          <h3>Live-session status checks</h3>
+          <p>If you set a live session, the overlay checks whether your channel is streaming by asking the matching platform — <strong>Twitch</strong>, <strong>YouTube</strong>, or <strong>Kick</strong> — through a small proxy service. Only your <strong>public channel handle</strong> is sent (never your Steam ID), and the proxy shields your viewers' IP addresses from the platform. The YouTube check uses <strong>YouTube API Services</strong>; by using it you're also subject to the <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube Terms of Service</a>, and Google's handling of any data is covered by the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.</p>
 
           <h3>The overlay is cookieless</h3>
           <p>The OBS overlay itself sets <strong>no cookies</strong> and stores nothing on your machine for analytics. It sends only anonymous counts (that it loaded, that a stream went live, and errors), so it needs no consent and shows no banner on stream.</p>
@@ -775,7 +796,7 @@ function init() {
         <div class="setup-head">
           <div class="brand-block">
             <h1 class="setup-title">CS2 Overlay Widget</h1>
-            <p class="setup-sub">Customize and use your own overlay widget for CS2. Enter your Twitch username to have a live W/L.</p>
+            <p class="setup-sub">Customize and use your own overlay widget for CS2. Paste your Twitch, YouTube, or Kick link to get a live-session W/L.</p>
           </div>
           <div class="link-row">
             <a class="link-chip link-repo" data-link="github" href="${REPO_URL}" target="_blank" rel="noopener">${ICON_GITHUB}<span>cs2-stats-overlay</span></a>
@@ -845,9 +866,9 @@ function init() {
                 <label class="check"><input type="checkbox" id="show-wl"><span class="check-text">Win Loss Record</span></label>
                 <div class="seg-row" id="wl-mode">
                   <button type="button" class="seg" data-mode="leetify">LEETIFY</button>
-                  <button type="button" class="seg" data-mode="twitch">TWITCH LIVE</button>
+                  <button type="button" class="seg" data-mode="live">LIVE SESSION</button>
                 </div>
-                <input type="text" id="twitch-login" class="field-input" placeholder="Twitch username" autocomplete="off" spellcheck="false" hidden>
+                <input type="text" id="live-channel" class="field-input" placeholder="Twitch, YouTube, or Kick link" autocomplete="off" spellcheck="false" hidden>
               </div>
 
               <div class="check-group">

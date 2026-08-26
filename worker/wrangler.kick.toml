@@ -1,0 +1,10 @@
+# Cloudflare Worker config for the Kick live-status proxy.
+#
+# Deploy:    wrangler deploy --config wrangler.kick.toml
+# Add creds: wrangler secret put KICK_CLIENT_ID --config wrangler.kick.toml
+#            wrangler secret put KICK_CLIENT_SECRET --config wrangler.kick.toml
+#            (never commit the secrets)
+
+name = "cs2-kick-live-proxy"
+main = "kick-live-proxy.js"
+compatibility_date = "2024-11-01"

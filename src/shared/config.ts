@@ -1,4 +1,16 @@
-import { DEFAULT_CONFIG, STAT_KEYS, STAT_MAX, type StatKey, type WidgetConfig } from './types';
+import {
+  DEFAULT_CONFIG,
+  STAT_KEYS,
+  STAT_MAX,
+  type LivePlatform,
+  type StatKey,
+  type WidgetConfig,
+} from './types';
+
+export interface LiveChannel {
+  platform: LivePlatform;
+  channel: string;
+}
 
 const DEFAULT_STATS = DEFAULT_CONFIG.stats.join(',');
 
@@ -25,11 +37,83 @@ export function normalizeTwitchLogin(raw: string): string {
   return /^[a-z0-9_]{4,25}$/.test(s) ? s : '';
 }
 
+// Normalizes a YouTube channel out of whatever the user pastes: a channel URL
+// (…/@handle, …/channel/UC…, …/c/name, …/user/name), a bare @handle, or a bare
+// channel id. A UCxxx id is kept verbatim (channel ids are case-sensitive);
+// anything else is reduced to an @handle. The proxy Worker does the actual
+// handle/username → channel-id resolution, so we just hand it the identifier.
+// Returns '' when nothing usable is found (which disables the session feature).
+export function normalizeYouTubeChannel(raw: string): string {
+  let s = raw.trim();
+  const urlMatch =
+    /youtube\.com\/(@[^/?#]+|channel\/[^/?#]+|c\/[^/?#]+|user\/[^/?#]+)/i.exec(s);
+  if (urlMatch) {
+    s = urlMatch[1].replace(/^(?:channel|c|user)\//i, '');
+  }
+  // A channel id: UC followed by 22 URL-safe base64 chars, case-sensitive.
+  if (/^UC[A-Za-z0-9_-]{22}$/.test(s)) return s;
+  // Otherwise treat it as a handle (legacy /c/ and /user/ names resolve the same
+  // way through the proxy's search fallback).
+  const handle = s.replace(/^@+/, '');
+  return /^[A-Za-z0-9._-]{3,30}$/.test(handle) ? `@${handle}` : '';
+}
+
+// Normalizes a Kick channel out of a kick.com/<slug> link, an @slug, or a bare
+// slug. Kick slugs are lowercase letters, digits, and underscores.
+export function normalizeKickSlug(raw: string): string {
+  let s = raw.trim().toLowerCase();
+  const urlMatch = /kick\.com\/([^/?#]+)/.exec(s);
+  if (urlMatch) s = urlMatch[1];
+  s = s.replace(/^@/, '');
+  return /^[a-z0-9_]{3,25}$/.test(s) ? s : '';
+}
+
+// Normalizes an already-known platform+channel pair (e.g. from a widget URL).
+// Returns null when the channel is unusable for that platform.
+export function normalizeLiveChannel(platform: string, channel: string): LiveChannel | null {
+  switch (platform) {
+    case 'twitch': {
+      const c = normalizeTwitchLogin(channel);
+      return c ? { platform: 'twitch', channel: c } : null;
+    }
+    case 'youtube': {
+      const c = normalizeYouTubeChannel(channel);
+      return c ? { platform: 'youtube', channel: c } : null;
+    }
+    case 'kick': {
+      const c = normalizeKickSlug(channel);
+      return c ? { platform: 'kick', channel: c } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+// Detects which platform a pasted value points at, then normalizes it. A URL
+// picks the platform by host; a bare handle with no recognizable host is treated
+// as Twitch, matching the widget's original single-platform behaviour. Returns
+// null when nothing usable can be extracted.
+export function parseLiveInput(raw: string): LiveChannel | null {
+  const s = raw.trim();
+  if (!s) return null;
+  const lower = s.toLowerCase();
+  if (lower.includes('youtube.com') || lower.includes('youtu.be')) {
+    return normalizeLiveChannel('youtube', s);
+  }
+  if (lower.includes('kick.com')) {
+    return normalizeLiveChannel('kick', s);
+  }
+  return normalizeLiveChannel('twitch', s);
+}
+
 export function configToParams(config: WidgetConfig): URLSearchParams {
   const params = new URLSearchParams();
   params.set('steamId', config.steamId);
-  // Twitch login drives session-scoped W/L; only include it when set.
-  if (config.twitchLogin) params.set('twitch', config.twitchLogin);
+  // The live source drives session-scoped W/L; only include it when set. Encoded
+  // as `live=<platform>:<channel>`, e.g. `live=twitch:kapowhi`.
+  if (config.livePlatform && config.liveChannel) {
+    params.set('live', `${config.livePlatform}:${config.liveChannel}`);
+  }
   if (!config.showAvatar) params.set('avatar', '0');
   if (!config.showName) params.set('name', '0');
   // Badge defaults OFF now, so encode the ON case explicitly.
@@ -65,7 +149,7 @@ export function configToParams(config: WidgetConfig): URLSearchParams {
 }
 
 // A compact, stable string that identifies a *setup* — every visible setting
-// except the identifying ones (steamId, twitchLogin). Because configToParams
+// except the identifying ones (steamId, live source). Because configToParams
 // only encodes values that differ from the defaults, an all-default setup
 // fingerprints as 'defaults'. Keys are sorted so the same choices always map to
 // the same string, which is what lets analytics rank the most common combos:
@@ -73,7 +157,7 @@ export function configToParams(config: WidgetConfig): URLSearchParams {
 export function settingsFingerprint(config: WidgetConfig): string {
   const params = configToParams(config);
   params.delete('steamId');
-  params.delete('twitch');
+  params.delete('live');
   params.sort();
   return params.toString() || 'defaults';
 }
@@ -95,9 +179,21 @@ export function paramsToConfig(params: URLSearchParams): WidgetConfig {
   const bgo = params.get('bgo');
   const fw = parseInt(params.get('fw') ?? '', 10);
 
+  // Live source: `live=<platform>:<channel>` on new URLs; fall back to the legacy
+  // `twitch=<login>` param so overlay URLs shared before this change keep working.
+  let live: LiveChannel | null = null;
+  const liveRaw = params.get('live');
+  if (liveRaw) {
+    const sep = liveRaw.indexOf(':');
+    if (sep > 0) live = normalizeLiveChannel(liveRaw.slice(0, sep), liveRaw.slice(sep + 1));
+  } else if (params.get('twitch')) {
+    live = normalizeLiveChannel('twitch', params.get('twitch') ?? '');
+  }
+
   return {
     steamId: params.get('steamId') ?? DEFAULT_CONFIG.steamId,
-    twitchLogin: normalizeTwitchLogin(params.get('twitch') ?? ''),
+    livePlatform: live?.platform ?? '',
+    liveChannel: live?.channel ?? '',
     showAvatar: params.get('avatar') !== '0',
     showName: params.get('name') !== '0',
     showBadge: params.get('badge') === '1',

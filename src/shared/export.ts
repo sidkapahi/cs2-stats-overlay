@@ -70,12 +70,39 @@ function bundleJs(base: string): string {
 (function () {
   var BASE = ${JSON.stringify(base)};
 
+  // Turns whatever is typed in the "live session" field into the widget's
+  // \`live=<platform>:<channel>\` param: an already-formatted value passes through,
+  // a Twitch/YouTube/Kick link is detected by host, and a bare handle defaults to
+  // Twitch. The widget re-validates the channel, so loose extraction is fine.
+  function parseLive(raw) {
+    var s = String(raw || '').trim();
+    if (!s) return '';
+    if (/^(twitch|youtube|kick):/i.test(s)) return s.toLowerCase().slice(0, s.indexOf(':')) + ':' + s.slice(s.indexOf(':') + 1);
+    var lower = s.toLowerCase();
+    var platform, token;
+    if (lower.indexOf('youtube.com') >= 0 || lower.indexOf('youtu.be') >= 0) {
+      platform = 'youtube';
+      var ym = /youtube\\.com\\/(@[^/?#]+|channel\\/[^/?#]+|c\\/[^/?#]+|user\\/[^/?#]+)/i.exec(s);
+      token = ym ? ym[1].replace(/^(?:channel|c|user)\\//i, '') : s;
+    } else if (lower.indexOf('kick.com') >= 0) {
+      platform = 'kick';
+      var km = /kick\\.com\\/([^/?#]+)/i.exec(s);
+      token = km ? km[1] : s;
+    } else {
+      platform = 'twitch';
+      var tm = /twitch\\.tv\\/([^/?#]+)/i.exec(s);
+      token = tm ? tm[1] : s;
+    }
+    token = token.replace(/^@+/, '');
+    return token ? platform + ':' + token : '';
+  }
+
   function buildUrl(f) {
     f = f || {};
     var p = new URLSearchParams();
     p.set('steamId', String(f.steamId || '').trim());
-    var twitch = String(f.twitch || '').trim();
-    if (twitch) p.set('twitch', twitch);
+    var live = parseLive(f.live);
+    if (live) p.set('live', live);
     p.set('avatar', f.showAvatar ? '1' : '0');
     p.set('name', f.showName ? '1' : '0');
     p.set('badge', f.showBadge ? '1' : '0');
@@ -124,10 +151,10 @@ function bundleFields(config: WidgetConfig): string {
       value: config.steamId,
       group: 'Player',
     },
-    twitch: {
+    live: {
       type: 'text',
-      label: 'Twitch username (optional — session W/L)',
-      value: config.twitchLogin,
+      label: 'Live session — Twitch, YouTube, or Kick link (optional — session W/L)',
+      value: config.livePlatform ? `${config.livePlatform}:${config.liveChannel}` : '',
       group: 'Player',
     },
     showAvatar: {

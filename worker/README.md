@@ -8,13 +8,14 @@ server-side (adding CORS) and answers three lookups:
 - **Avatar** — resolves a Steam64 ID to a Steam avatar URL.
 - **Vanity URL** — resolves a custom `steamcommunity.com/id/<name>` profile link
   to a Steam64 ID, so the customizer can accept those links directly.
-- **Twitch live status** — reports whether a Twitch channel is currently live,
-  which drives the widget's optional session-scoped win/loss.
+- **Live status** — reports whether a channel is currently live. This lives in a
+  set of separate Workers, one per platform (Twitch, YouTube, Kick), documented
+  further down.
 
 It's **optional**. Without it, the widget simply doesn't show an avatar, the
 customizer only accepts a Steam64 ID or a `steamcommunity.com/profiles/…` link
 (both of which need no server call) rather than custom `/id/…` links, and the
-Twitch session W/L falls back to the normal rolling-window W/L.
+live-session W/L falls back to the normal rolling-window W/L.
 
 ## Deploy
 
@@ -53,24 +54,29 @@ That's it. The widget calls `GET {VITE_AVATAR_PROXY_URL}?steam64_id=<id>` and
 renders the returned avatar. The **Steam key stays on Cloudflare** and never
 reaches the browser.
 
-# Twitch live-status proxy (Cloudflare Worker)
+# Live-status proxies (Cloudflare Workers)
 
-This is a **second, separate Worker** (`twitch-live-proxy.js`), so the Twitch
-credentials live apart from the Steam key. It's what powers the widget's optional
-**session win/loss**: setting a Twitch username in the customizer switches the
-W/L pills to a **per-stream record** — they reset to `W0 L0` when the channel
-goes live, count only matches finished during that stream, and freeze (keeping
-the last stream's record) once the channel goes offline. The session is stored
-per player in the browser's `localStorage`, so an OBS source refresh mid-stream
-doesn't lose it.
+These are **separate Workers, one per platform** (`twitch-live-proxy.js`,
+`youtube-live-proxy.js`, `kick-live-proxy.js`), so each platform's credentials
+live apart from the Steam key and from each other. They power the widget's
+optional **session win/loss**: pasting a Twitch, YouTube, or Kick link in the
+customizer switches the W/L pills to a **per-stream record** — they reset to
+`W0 L0` when the channel goes live, count only matches finished during that
+stream, and freeze (keeping the last stream's record) once the channel goes
+offline. The session is stored per player in the browser's `localStorage`, so an
+OBS source refresh mid-stream doesn't lose it.
 
-Checking whether a channel is live uses Twitch's Helix **Get Streams**, which
-needs an *app access token* — and that requires a client id **and secret** (the
-client-credentials flow), so it has to run on a Worker. Note this reads only
-**public** data ("is channel X live?"); the streamer never logs in or authorizes
-anything — the username is just a lookup key.
+The customizer detects the platform from the link the user pastes and routes to
+that platform's Worker. **You only need to deploy the platforms you want** — any
+Worker you skip just means links for that platform fall back to the normal
+rolling-window W/L. Every check reads only **public** data ("is channel X
+live?"); the streamer never logs in or authorizes anything.
 
-## Deploy
+## Twitch
+
+Twitch's Helix **Get Streams** needs an *app access token*, which requires a
+client id **and secret** (the client-credentials flow), so it has to run on a
+Worker.
 
 1. **Register a Twitch application** at
    <https://dev.twitch.tv/console/apps> → **Register Your Application**. Any name
@@ -78,47 +84,82 @@ anything — the username is just a lookup key.
    client-credentials flow). Note the **Client ID** and generate a **Client
    Secret**.
 
-2. **Deploy this Worker** (its own wrangler config points at
-   `twitch-live-proxy.js`):
+2. **Deploy** and **add the secrets**:
 
    ```bash
    cd worker
    npx wrangler deploy --config wrangler.twitch.toml
-   ```
-
-   (Or create a second Worker in the Cloudflare dashboard and paste in
-   `twitch-live-proxy.js`.)
-
-3. **Add the credentials as secrets** — never commit them:
-
-   ```bash
    npx wrangler secret put TWITCH_CLIENT_ID --config wrangler.twitch.toml
    npx wrangler secret put TWITCH_CLIENT_SECRET --config wrangler.twitch.toml
    ```
 
-   (Dashboard equivalent: the Twitch Worker → Settings → Variables and Secrets →
-   add two **secrets** with those names.)
+3. **Point the widget at it** via a repository **variable** (or `.env.local` for
+   local dev) named `VITE_TWITCH_PROXY_URL`.
 
-4. **Point the widget at this Worker** via `VITE_TWITCH_PROXY_URL` (distinct from
-   the avatar proxy's `VITE_AVATAR_PROXY_URL`):
+## YouTube
 
-   - **Local dev:** add it to `.env.local`.
-   - **Deployed site:** add a repository **variable** `VITE_TWITCH_PROXY_URL`
-     under Settings → Secrets and variables → Actions.
+The YouTube Data API v3 check uses a plain **API key** — no OAuth, no app
+verification (it reads only public data). The catch is **quota**: the API gives
+10,000 units/day by default and the live check (`search.list`) costs 100 units
+each, so the Worker caches results at the edge for ~60s and caches handle→id
+resolution in memory. Real API calls happen at most ~once per channel per minute
+per Cloudflare colo.
 
-The widget calls `GET {VITE_TWITCH_PROXY_URL}?twitch=<login>` every ~15 seconds
-(independent of the slower stats refresh), well within Twitch's app-token rate
-limit. If the credentials aren't set the lookup returns `501` and the widget
-falls back to the rolling-window W/L — as it also does when this Worker isn't
-deployed at all.
+1. **Create an API key**: in the [Google Cloud
+   Console](https://console.cloud.google.com/), create a project, enable
+   **YouTube Data API v3**, then create an API key under **APIs & Services →
+   Credentials**. (Creating the key means agreeing to the [YouTube API Services
+   Terms](https://developers.google.com/youtube/terms/api-services-terms-of-service).)
+
+2. **Deploy** and **add the key**:
+
+   ```bash
+   cd worker
+   npx wrangler deploy --config wrangler.youtube.toml
+   npx wrangler secret put YOUTUBE_API_KEY --config wrangler.youtube.toml
+   ```
+
+3. **Point the widget at it** via a repository **variable** (or `.env.local`)
+   named `VITE_YOUTUBE_PROXY_URL`.
+
+The Worker accepts an `@handle`, a `UC…` channel id, or a legacy custom/user
+name and resolves it to a channel id itself.
+
+## Kick
+
+Kick's official API uses the same shape as Twitch: an *app access token* from a
+client id **and secret** (OAuth 2.1 client-credentials).
+
+1. **Register an app** in your Kick account under **Settings → Developer** and
+   note the **Client ID** + **Client Secret**.
+
+2. **Deploy** and **add the secrets**:
+
+   ```bash
+   cd worker
+   npx wrangler deploy --config wrangler.kick.toml
+   npx wrangler secret put KICK_CLIENT_ID --config wrangler.kick.toml
+   npx wrangler secret put KICK_CLIENT_SECRET --config wrangler.kick.toml
+   ```
+
+3. **Point the widget at it** via a repository **variable** (or `.env.local`)
+   named `VITE_KICK_PROXY_URL`.
+
+## Polling
+
+The widget calls `GET {PROXY}?<platform>=<channel>` every ~15 seconds
+(independent of the slower stats refresh). If a platform's credentials aren't set
+its Worker returns `501` and the widget falls back to the rolling-window W/L — as
+it also does when that Worker isn't deployed at all.
 
 ## Allowed origins (CORS)
 
-**Both** Workers gate browser requests by an `ALLOWED_ORIGINS` set at the top of
-their file — that's what stops other websites from spending your keys / quota.
-Edit that list in each of `steam-avatar-proxy.js` and `twitch-live-proxy.js`
-(scheme + host only, no trailing slash) to match wherever the widget is hosted,
-e.g. `https://<you>.github.io`, plus `http://localhost:5173` for local dev. After
+**Every** Worker gates browser requests by an `ALLOWED_ORIGINS` set at the top of
+its file — that's what stops other websites from spending your keys / quota.
+Edit that list in each of `steam-avatar-proxy.js`, `twitch-live-proxy.js`,
+`youtube-live-proxy.js`, and `kick-live-proxy.js` (scheme + host only, no
+trailing slash) to match wherever the widget is hosted, e.g.
+`https://<you>.github.io`, plus `http://localhost:5173` for local dev. After
 changing it, redeploy that Worker.
 
 ## Response shape
@@ -143,13 +184,17 @@ GET /?vanity=gabelogannewell
 A name with no matching profile returns `404 { "error": … }`; invalid names
 return `400`.
 
-**Twitch live status:**
+**Live status** (each platform's Worker, keyed by its own param):
 
 ```
-GET /?twitch=ninja
+GET /?twitch=ninja                 (twitch-live-proxy.js)
+GET /?youtube=@MrBeast             (youtube-live-proxy.js — @handle, UC… id, or name)
+GET /?kick=xqc                     (kick-live-proxy.js)
 → 200 { "live": true }   // or { "live": false } when offline
 ```
 
-Invalid logins return `400`; when the Twitch secrets aren't configured the
-lookup returns `501 { "error": … }` (the widget then falls back to the normal
-rolling-window W/L). This response is never cached, since live status changes.
+Invalid channels return `400`; when a platform's credentials aren't configured
+the lookup returns `501 { "error": … }` (the widget then falls back to the normal
+rolling-window W/L). The Twitch and Kick responses are never cached, since live
+status changes; the YouTube Worker caches at the edge for ~60s to protect its
+API quota (see the YouTube section above).
