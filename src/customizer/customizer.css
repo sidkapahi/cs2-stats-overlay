@@ -893,7 +893,12 @@ select.field-input {
   }
 }
 
-/* ---- Footer privacy link ------------------------------------------------ */
+/* ---- Footer legal links -------------------------------------------------- */
+.foot-legal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .foot-link {
   background: none;
   border: none;
@@ -1134,11 +1139,13 @@ select.field-input {
   color: var(--text);
   font-weight: 700;
 }
+.modal-body a,
 .modal-mail {
   color: #2f7bff;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.modal-body a:hover,
 .modal-mail:hover {
   filter: brightness(1.15);
 }
