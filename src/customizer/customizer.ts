@@ -881,7 +881,7 @@ function mountTos() {
           <h3>Stats and connected platforms are your responsibility</h3>
           <p>CS2 Stats Overlay reads your public CS2 stats from <a href="https://leetify.com" target="_blank" rel="noopener">Leetify</a> using the Steam profile you point it at, and it can check whether a channel you enter is live on Twitch, YouTube, or Kick. You are responsible for using those services within their own terms and for having the rights to the accounts and profile you connect:</p>
           <ul>
-            <li><a href="https://leetify.com/terms" target="_blank" rel="noopener">Leetify Terms of Service</a></li>
+            <li><a href="https://leetify.com/terms-of-service" target="_blank" rel="noopener">Leetify Terms of Service</a></li>
             <li><a href="https://www.twitch.tv/p/legal/terms-of-service/" target="_blank" rel="noopener">Twitch Terms of Service</a></li>
             <li><a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube Terms of Service</a> and the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a></li>
             <li><a href="https://kick.com/terms-of-service" target="_blank" rel="noopener">Kick Terms of Service</a></li>
