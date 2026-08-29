@@ -82,7 +82,7 @@ async function init() {
     let data = lastData;
     if (sessionMode) {
       const wasLive = sessionState.live;
-      sessionState = advanceSession(sessionState, lastLive, lastData.recentGames);
+      sessionState = advanceSession(sessionState, lastLive, lastData.recentGames, lastData.rating);
       // A false→true flip is a fresh stream session starting; count it once.
       // (An OBS source refresh reloads the persisted live=true state, so it
       // won't re-fire — we count real go-live transitions, not refreshes.)
@@ -93,6 +93,11 @@ async function init() {
       const wl = readWinLoss(sessionState);
       if (wl.mode === 'session') {
         data = { ...lastData, wins: wl.wins, losses: wl.losses };
+      }
+      // FACEIT has no per-match ELO delta from its API, so the change pill shows
+      // the ELO gained/lost this stream: current − the go-live snapshot.
+      if (config.provider === 'faceit' && sessionState.startRating != null) {
+        data = { ...data, ratingDiff: lastData.rating - sessionState.startRating };
       }
     }
     container.innerHTML = renderWidget(config, data);

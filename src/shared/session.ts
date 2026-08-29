@@ -24,6 +24,11 @@ export interface SessionState {
   preSessionIds: string[];
   // Outcomes of matches finished during the current session, keyed by match id.
   results: Record<string, 'win' | 'loss' | 'tie'>;
+  // Rating (FACEIT ELO) snapshotted at go-live. FACEIT has no per-match ELO
+  // delta from its API, so the "change" pill in FACEIT mode is derived as
+  // current − this snapshot: the ELO gained/lost this stream. Undefined before
+  // the first go-live.
+  startRating?: number;
 }
 
 export interface SessionWinLoss {
@@ -51,18 +56,22 @@ export function advanceSession(
   prev: SessionState,
   liveNow: boolean | null,
   recent: LeetifyMatch[],
+  currentRating?: number,
 ): SessionState {
   const state: SessionState = {
     live: prev.live,
     preSessionIds: [...prev.preSessionIds],
     results: { ...prev.results },
+    startRating: prev.startRating,
   };
 
   if (liveNow === true && !prev.live) {
-    // Go-live: start a fresh session. Every current match is pre-session.
+    // Go-live: start a fresh session. Every current match is pre-session, and
+    // the current rating becomes the baseline for the session ELO change.
     state.live = true;
     state.preSessionIds = recent.map((m) => m.id);
     state.results = {};
+    state.startRating = currentRating;
   } else if (liveNow === false && prev.live) {
     // Go-offline: freeze. Keep results as the last stream's record.
     state.live = false;
@@ -110,6 +119,7 @@ export function loadSession(steamId: string, platform: string, channel: string):
       live: typeof parsed.live === 'boolean' ? parsed.live : false,
       preSessionIds: Array.isArray(parsed.preSessionIds) ? parsed.preSessionIds : [],
       results: parsed.results && typeof parsed.results === 'object' ? parsed.results : {},
+      startRating: typeof parsed.startRating === 'number' ? parsed.startRating : undefined,
     };
   } catch {
     return emptyState();
