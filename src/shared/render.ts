@@ -154,15 +154,16 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
     statsHtml = `<div class="stats">${cells}</div>`;
   }
 
-  // Match-history strip: W/L/T letters (oldest → newest) plus the wordmark.
-  // When stats are hidden the row has more room, so the strip is capped at 5 and
-  // the top row spreads (rank ⇄ W/L); with stats on it shows up to matchCount.
+  // Match-history strip: W/L/T letters most-recent → oldest, left to right.
+  // recentGames is newest-first (both providers), so no reversal. When stats are
+  // hidden the row has more room, so the strip is capped at 5 and the top row
+  // spreads (rank ⇄ W/L); with stats on it shows up to matchCount.
   const noStatsWithHistory = !config.showStats && config.showMatchHistory;
   const historyCount = noStatsWithHistory ? Math.min(5, config.matchCount) : config.matchCount;
   let historyHtml = '';
   if (config.showMatchHistory) {
-    const letters = [...data.recentGames.slice(0, historyCount)]
-      .reverse()
+    const letters = data.recentGames
+      .slice(0, historyCount)
       .map((g) => {
         const cls = g.outcome === 'win' ? 'w' : g.outcome === 'tie' ? 't' : 'l';
         const lbl = g.outcome === 'win' ? 'W' : g.outcome === 'tie' ? 'T' : 'L';
