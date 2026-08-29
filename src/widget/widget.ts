@@ -1,5 +1,6 @@
 import { initOverlayAnalytics, trackOverlayEvent } from '../shared/analyticsOverlay';
 import { classifyFetchError, fetchPremierData, type PremierData } from '../shared/api';
+import { fetchFaceitData } from '../shared/faceit';
 import { paramsToConfig } from '../shared/config';
 import { loadFont } from '../shared/fonts';
 import { renderMessage, renderWidget } from '../shared/render';
@@ -28,8 +29,13 @@ async function init() {
   // Pull in the chosen Google Font at the chosen weight (Inter is already bundled).
   loadFont(config.font, config.fontWeight);
 
-  if (!config.steamId) {
-    container.innerHTML = renderMessage('Error', 'No Steam ID provided.');
+  // The identifier for this overlay: a FACEIT nickname in FACEIT mode, else the
+  // Steam ID. Also used to key the live-session store so switching provider
+  // doesn't cross session records.
+  const identity = config.provider === 'faceit' ? config.faceitNickname : config.steamId;
+  if (!identity) {
+    const missing = config.provider === 'faceit' ? 'No FACEIT nickname provided.' : 'No Steam ID provided.';
+    container.innerHTML = renderMessage('Error', missing);
     return;
   }
 
@@ -48,7 +54,7 @@ async function init() {
     !!config.liveChannel &&
     liveCheckAvailable(config.livePlatform);
   let sessionState: SessionState = sessionMode
-    ? loadSession(config.steamId, config.livePlatform, config.liveChannel)
+    ? loadSession(identity, config.livePlatform, config.liveChannel)
     : { live: false, preSessionIds: [], results: {} };
 
   // Overlay analytics: cookieless (no cookies, no storage, no consent banner on
@@ -83,7 +89,7 @@ async function init() {
       if (!wasLive && sessionState.live) {
         trackOverlayEvent('live_session_started', { platform: config.livePlatform });
       }
-      saveSession(config.steamId, config.livePlatform, config.liveChannel, sessionState);
+      saveSession(identity, config.livePlatform, config.liveChannel, sessionState);
       const wl = readWinLoss(sessionState);
       if (wl.mode === 'session') {
         data = { ...lastData, wins: wl.wins, losses: wl.losses };
@@ -94,7 +100,10 @@ async function init() {
 
   async function updateStats() {
     try {
-      lastData = await fetchPremierData(config.steamId);
+      lastData =
+        config.provider === 'faceit'
+          ? await fetchFaceitData(config.faceitNickname)
+          : await fetchPremierData(config.steamId);
       statsHealthy = true;
       render();
     } catch (e) {

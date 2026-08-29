@@ -35,6 +35,18 @@ export interface PremierData {
   losses: number;
   recentGames: LeetifyGame[];
   aimRating: number;
+  // FACEIT-only fields, unset in Premier (Leetify) mode. `render.ts` reads them
+  // only when the widget's provider is 'faceit'.
+  //
+  // Lowercase ISO 3166-1 alpha-2 country code (drives the flag), e.g. 'ca'.
+  country?: string;
+  // FACEIT skill level 1–10; 10 is Challenger. Drives the rank dial.
+  skillLevel?: number;
+  // Challenger leaderboard position (the `#528` pill); only set for level 10.
+  leaderboardPosition?: number;
+  // Lifetime FACEIT stats for the ADR / HS% stat cells (0..1 for `hsPct`).
+  adr?: number;
+  hsPct?: number;
 }
 
 // Maps a fetch/resolve failure to a coarse, non-PII reason code for analytics,

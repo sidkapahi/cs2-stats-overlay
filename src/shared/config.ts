@@ -1,8 +1,10 @@
 import {
   DEFAULT_CONFIG,
-  STAT_KEYS,
+  DEFAULT_STATS_BY_PROVIDER,
+  PROVIDER_STATS,
   STAT_MAX,
   type LivePlatform,
+  type Provider,
   type StatKey,
   type WidgetConfig,
 } from './types';
@@ -12,13 +14,14 @@ export interface LiveChannel {
   channel: string;
 }
 
-const DEFAULT_STATS = DEFAULT_CONFIG.stats.join(',');
-
-// Keeps only valid, unique stat keys, in the order given, capped at STAT_MAX.
-function sanitizeStats(keys: string[]): StatKey[] {
+// Keeps only unique stat keys valid for this provider, in the order given,
+// capped at STAT_MAX. `allowed` is the provider's offered set (PROVIDER_STATS),
+// so a stale URL carrying, say, `aim` in FACEIT mode drops it rather than
+// rendering an empty cell.
+function sanitizeStats(keys: string[], allowed: StatKey[]): StatKey[] {
   const seen = new Set<StatKey>();
   for (const k of keys) {
-    if ((STAT_KEYS as string[]).includes(k)) seen.add(k as StatKey);
+    if ((allowed as string[]).includes(k)) seen.add(k as StatKey);
   }
   return [...seen].slice(0, STAT_MAX);
 }
@@ -108,7 +111,14 @@ export function parseLiveInput(raw: string): LiveChannel | null {
 
 export function configToParams(config: WidgetConfig): URLSearchParams {
   const params = new URLSearchParams();
-  params.set('steamId', config.steamId);
+  // Data source + identity. FACEIT mode is keyed by nickname (`fn`); Premier
+  // (the default) by Steam ID. `provider` is only encoded for the non-default.
+  if (config.provider === 'faceit') {
+    params.set('provider', 'faceit');
+    params.set('fn', config.faceitNickname);
+  } else {
+    params.set('steamId', config.steamId);
+  }
   // The live source drives session-scoped W/L; only include it when set. Encoded
   // as `live=<platform>:<channel>`, e.g. `live=twitch:kapowhi`.
   if (config.livePlatform && config.liveChannel) {
@@ -124,7 +134,7 @@ export function configToParams(config: WidgetConfig): URLSearchParams {
   // when it differs from the default trio (keeps the common URL clean).
   if (!config.showStats) {
     params.set('stats', 'off');
-  } else if (config.stats.join(',') !== DEFAULT_STATS) {
+  } else if (config.stats.join(',') !== DEFAULT_STATS_BY_PROVIDER[config.provider].join(',')) {
     params.set('stats', config.stats.join(','));
   }
   // Match history defaults OFF now, so encode the ON case explicitly.
@@ -157,21 +167,25 @@ export function configToParams(config: WidgetConfig): URLSearchParams {
 export function settingsFingerprint(config: WidgetConfig): string {
   const params = configToParams(config);
   params.delete('steamId');
+  params.delete('fn');
   params.delete('live');
   params.sort();
   return params.toString() || 'defaults';
 }
 
 export function paramsToConfig(params: URLSearchParams): WidgetConfig {
+  const provider: Provider = params.get('provider') === 'faceit' ? 'faceit' : 'leetify';
+
   // Stats: 'off' hides the block; a comma list picks specific stats; absent uses
-  // the default trio.
+  // the provider's default trio. The comma list is filtered to the provider's
+  // offered keys so a mismatched key from an old/edited URL is dropped.
   const statsParam = params.get('stats');
   let showStats = true;
-  let stats = [...DEFAULT_CONFIG.stats];
+  let stats = [...DEFAULT_STATS_BY_PROVIDER[provider]];
   if (statsParam === 'off' || statsParam === '0') {
     showStats = false;
   } else if (statsParam) {
-    const parsed = sanitizeStats(statsParam.split(','));
+    const parsed = sanitizeStats(statsParam.split(','), PROVIDER_STATS[provider]);
     if (parsed.length > 0) stats = parsed;
   }
 
@@ -191,7 +205,9 @@ export function paramsToConfig(params: URLSearchParams): WidgetConfig {
   }
 
   return {
+    provider,
     steamId: params.get('steamId') ?? DEFAULT_CONFIG.steamId,
+    faceitNickname: params.get('fn') ?? DEFAULT_CONFIG.faceitNickname,
     livePlatform: live?.platform ?? '',
     liveChannel: live?.channel ?? '',
     showAvatar: params.get('avatar') !== '0',

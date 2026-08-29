@@ -99,6 +99,9 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
       avg: withKd.length > 0 ? (totalKills / withKd.length).toFixed(1) : '—',
       aim: data.aimRating.toFixed(1),
       winpct: `${Math.round((data.winRate ?? 0) * 100)}%`,
+      // FACEIT-only stats: lifetime ADR and headshot %, unset in Premier mode.
+      adr: data.adr != null ? data.adr.toFixed(1) : '—',
+      hs: data.hsPct != null ? `${Math.round(data.hsPct * 100)}%` : '—',
     };
     const cells = config.stats
       .map(
