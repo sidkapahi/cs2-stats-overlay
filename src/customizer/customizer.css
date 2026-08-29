@@ -486,6 +486,30 @@ select.field-input {
   cursor: not-allowed;
 }
 
+/* PREMIER | FACEIT provider toggle (Figma 64:1275) — a #0f0f0f track where the
+   active segment is a dark #191919 pill with a #2b2b2b border and white text,
+   and the inactive segment is transparent with muted grey text. Distinct from
+   the white-fill W/L seg-row above. */
+.provider-toggle {
+  gap: 0;
+  padding: 6px;
+  background: #0f0f0f;
+  border-radius: 8px;
+}
+.provider-toggle .seg {
+  padding: 6px 12px;
+  border: 1px solid transparent; /* reserve the border box so the active pill doesn't shift the row */
+  border-radius: 5.5px;
+  background: transparent;
+  color: #707070;
+  font-size: 16px;
+}
+.provider-toggle .seg.selected {
+  background: #191919;
+  border-color: #2b2b2b;
+  color: #fff;
+}
+
 /* ---- Font combobox ------------------------------------------------------- */
 .combo {
   position: relative;
