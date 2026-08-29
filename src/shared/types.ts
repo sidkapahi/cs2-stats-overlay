@@ -113,7 +113,7 @@ export type Provider = 'leetify' | 'faceit';
 // The stat keys each provider can offer, in the customizer's display order.
 // FACEIT has no aim rating; Premier (Leetify) has no ADR/HS.
 export const PROVIDER_STATS: Record<Provider, StatKey[]> = {
-  leetify: ['kd', 'avg', 'aim', 'winpct'],
+  leetify: ['kd', 'avg', 'aim', 'winpct', 'hs'],
   faceit: ['kd', 'avg', 'adr', 'winpct', 'hs'],
 };
 
