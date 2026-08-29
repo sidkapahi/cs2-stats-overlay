@@ -54,6 +54,52 @@ That's it. The widget calls `GET {VITE_AVATAR_PROXY_URL}?steam64_id=<id>` and
 renders the returned avatar. The **Steam key stays on Cloudflare** and never
 reaches the browser.
 
+# FACEIT proxy (Cloudflare Worker)
+
+Powers the widget's **FACEIT mode** (the `PREMIER | FACEIT` toggle in the
+customizer). FACEIT's Data API needs a secret `Authorization: Bearer <key>`
+header and sends no CORS headers, so — like the Steam key — it can't be called
+from the static site. This Worker (`faceit-proxy.js`) keeps the key server-side
+and, in a single request, resolves a FACEIT nickname to everything the overlay
+needs: ELO + skill level, lifetime stats (K/D, win rate, ADR, HS%), the recent
+match list with per-match kills/deaths, and — for Challenger-tier players — the
+leaderboard position. FACEIT has no batched per-match-stats endpoint, so this
+chaining is done on the Worker, keeping the browser to one call.
+
+Unlike the Steam proxy, this one is **required for FACEIT mode** — without it the
+customizer's FACEIT option has no data source. Premier (Leetify) mode is
+unaffected and needs none of this.
+
+## Deploy
+
+1. **Get a FACEIT Data API key** (free): create an app at
+   <https://developers.faceit.com/> (App Studio) and generate a **server-side**
+   API key.
+
+2. **Deploy the Worker** with [Wrangler](https://developers.cloudflare.com/workers/wrangler/):
+
+   ```bash
+   cd worker
+   npx wrangler deploy --config wrangler.faceit.toml
+   ```
+
+   (Or create a Worker in the Cloudflare dashboard and paste in `faceit-proxy.js`.)
+
+3. **Add your key as a secret** — never commit it:
+
+   ```bash
+   npx wrangler secret put FACEIT_API_KEY --config wrangler.faceit.toml
+   ```
+
+   (Dashboard equivalent: your Worker → Settings → Variables and Secrets → add a
+   **secret** named `FACEIT_API_KEY`.)
+
+4. **Point the widget at the Worker** via a repository **variable** (or
+   `.env.local` for local dev) named `VITE_FACEIT_PROXY_URL`. The URL is not
+   sensitive — it gets inlined into the public bundle — so a plain repository
+   *variable* is fine. The **FACEIT key stays on Cloudflare** and never reaches
+   the browser.
+
 # Live-status proxies (Cloudflare Workers)
 
 These are **separate Workers, one per platform** (`twitch-live-proxy.js`,
@@ -156,9 +202,10 @@ it also does when that Worker isn't deployed at all.
 
 **Every** Worker gates browser requests by an `ALLOWED_ORIGINS` set at the top of
 its file — that's what stops other websites from spending your keys / quota.
-Edit that list in each of `steam-avatar-proxy.js`, `twitch-live-proxy.js`,
-`youtube-live-proxy.js`, and `kick-live-proxy.js` (scheme + host only, no
-trailing slash) to match wherever the widget is hosted, e.g.
+Edit that list in each of `steam-avatar-proxy.js`, `faceit-proxy.js`,
+`twitch-live-proxy.js`, `youtube-live-proxy.js`, and `kick-live-proxy.js`
+(scheme + host only, no trailing slash) to match wherever the widget is hosted,
+e.g.
 `https://<you>.github.io`, plus `http://localhost:5173` for local dev. After
 changing it, redeploy that Worker.
 
@@ -183,6 +230,28 @@ GET /?vanity=gabelogannewell
 
 A name with no matching profile returns `404 { "error": … }`; invalid names
 return `400`.
+
+**FACEIT profile** (`faceit-proxy.js`):
+
+```
+GET /?nickname=s1mple&history=10
+→ 200 {
+    "nickname": "s1mple", "playerId": "…", "country": "ua",
+    "avatarUrl": "https://…", "elo": 3200, "level": 10, "region": "EU",
+    "winRate": 0.61, "kd": 1.34, "adr": 92.1, "hs": 0.53,
+    "position": 528,                       // Challenger rank, else null
+    "matches": [
+      { "matchId": "…", "outcome": "win", "kills": 24, "deaths": 15, "adr": 98.2, "hs": 0.58 },
+      …
+    ]
+  }
+```
+
+`history` is optional (default 10, capped at 20). Lifetime fields the API
+doesn't expose come back `null`; a per-match stat that can't be fetched leaves
+that match's `kills`/`deaths` `null` but keeps its `outcome`. An unknown
+nickname returns `404`, an invalid one `400`, and a missing `FACEIT_API_KEY`
+`500`. Successful responses are cached ~30s; errors are never cached.
 
 **Live status** (each platform's Worker, keyed by its own param):
 
