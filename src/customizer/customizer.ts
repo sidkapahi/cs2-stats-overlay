@@ -13,6 +13,7 @@ import {
   resolveVanityUrl,
   type PremierData,
 } from "../shared/api";
+import { fetchFaceitData } from "../shared/faceit";
 import { brandLogoSrc } from "../shared/brandLogo";
 import {
   configToParams,
@@ -34,9 +35,11 @@ import {
 import { parseSteamInput } from "../shared/steamId";
 import {
   DEFAULT_CONFIG,
-  STAT_KEYS,
+  DEFAULT_STATS_BY_PROVIDER,
+  PROVIDER_STATS,
   STAT_LABELS,
   STAT_MAX,
+  type Provider,
   type StatKey,
   type WidgetConfig,
 } from "../shared/types";
@@ -71,10 +74,17 @@ const ICON_COPY = `<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="t
 const ICON_CHECK = `<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,0,1,17-17L96,183.51,215.51,63.51a12,12,0,0,1,17,17Z"/></svg>`;
 const ICON_WARNING = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>`;
 
-// Prompt shown in the preview before a Steam ID resolves.
-const PROMPT_TEXT = "ENTER YOUR STEAM NAME OR PROFILE LINK";
-// Stat pills are shown in the Figma order (K/D, AIM, AVG, WIN %).
-const STAT_PILL_ORDER: StatKey[] = ["kd", "aim", "avg", "winpct"];
+// Prompt shown in the preview before an identity resolves, per provider.
+const PROMPT_BY_PROVIDER: Record<Provider, string> = {
+  leetify: "ENTER YOUR STEAM NAME OR PROFILE LINK",
+  faceit: "ENTER YOUR FACEIT NICKNAME",
+};
+// Identity input label + placeholder per provider.
+const IDENTITY_LABEL: Record<Provider, string> = { leetify: "STEAM", faceit: "FACEIT" };
+const IDENTITY_PLACEHOLDER: Record<Provider, string> = {
+  leetify: "Steam64 ID, profile link, or vanity name",
+  faceit: "FACEIT nickname",
+};
 
 let currentConfig: WidgetConfig = { ...DEFAULT_CONFIG, stats: [...DEFAULT_CONFIG.stats] };
 
@@ -177,13 +187,13 @@ function renderPreview() {
     // prompt card so the panel never looks broken.
     body.innerHTML = previewData
       ? renderWidget(currentConfig, previewData)
-      : promptCardHtml(PROMPT_TEXT);
+      : promptCardHtml(PROMPT_BY_PROVIDER[currentConfig.provider]);
   } else {
     banner.hidden = true;
     if (previewLoading) {
       body.innerHTML = renderMessage("Loading", "…");
     } else if (!previewData) {
-      body.innerHTML = promptCardHtml(PROMPT_TEXT);
+      body.innerHTML = promptCardHtml(PROMPT_BY_PROVIDER[currentConfig.provider]);
     } else {
       body.innerHTML = renderWidget(currentConfig, previewData);
     }
@@ -192,9 +202,17 @@ function renderPreview() {
   fitPreview();
 }
 
+// Whether the current provider has an identity entered (a Steam ID / FACEIT
+// nickname), which gates the generated URL and export.
+function hasIdentity(): boolean {
+  return currentConfig.provider === "faceit"
+    ? !!currentConfig.faceitNickname
+    : !!currentConfig.steamId;
+}
+
 function updateGeneratedUrl() {
   const urlEl = document.getElementById("generated-url") as HTMLInputElement;
-  const url = currentConfig.steamId ? getWidgetUrl() : "";
+  const url = hasIdentity() ? getWidgetUrl() : "";
   urlEl.value = url;
 
   const zipBtn = document.getElementById("export-zip") as HTMLButtonElement | null;
@@ -298,10 +316,108 @@ function debouncedLoadPreview(rawInput: string) {
   debounceTimer = setTimeout(() => resolveAndLoad(rawInput), 600);
 }
 
+// FACEIT preview: no vanity round-trip — the nickname goes straight to the
+// FACEIT proxy Worker, which resolves it and returns the full payload.
+async function resolveAndLoadFaceit(rawInput: string) {
+  const token = ++resolveToken;
+  const nick = rawInput.trim();
+  currentConfig.faceitNickname = nick;
+  updateGeneratedUrl();
+
+  if (!nick) {
+    previewData = null;
+    previewError = null;
+    previewLoading = false;
+    renderPreview();
+    return;
+  }
+
+  previewLoading = true;
+  previewError = null;
+  renderPreview();
+
+  try {
+    const data = await fetchFaceitData(nick);
+    if (token !== resolveToken) return; // superseded by newer input
+    previewData = data;
+    if (nick !== lastTrackedSteamId) {
+      trackEvent("steam_id_entered"); // funnel count; no nickname sent
+      lastTrackedSteamId = nick;
+    }
+  } catch (e) {
+    if (token !== resolveToken) return; // superseded by newer input
+    trackEvent("preview_error", { stage: "stats", reason: classifyFetchError(e) });
+    previewError = e instanceof Error ? e.message : "Failed to load";
+    previewData = null;
+  }
+  previewLoading = false;
+  renderPreview();
+  updateGeneratedUrl();
+}
+
+function debouncedLoadFaceit(rawInput: string) {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => resolveAndLoadFaceit(rawInput), 600);
+}
+
+// Switches the active provider: swaps the identity label/input, resets the stat
+// trio + pills to that provider's default, clears the entered identity and
+// preview, and hides the Avatar toggle in FACEIT (the dial fills the left slot).
+function setProvider(provider: Provider) {
+  if (currentConfig.provider === provider) return;
+  currentConfig.provider = provider;
+  currentConfig.steamId = "";
+  currentConfig.faceitNickname = "";
+  currentConfig.stats = [...DEFAULT_STATS_BY_PROVIDER[provider]];
+
+  const label = document.getElementById("identity-label");
+  if (label) label.textContent = IDENTITY_LABEL[provider];
+  const input = document.getElementById("steam-id") as HTMLInputElement;
+  input.placeholder = IDENTITY_PLACEHOLDER[provider];
+  input.value = "";
+
+  const pills = document.getElementById("stats-pills");
+  if (pills) pills.innerHTML = statPillsHtml();
+  syncStatsUi();
+  syncProviderToggle();
+  syncProviderRows();
+
+  previewData = null;
+  previewError = null;
+  previewLoading = false;
+  lastTrackedSteamId = null;
+  renderPreview();
+  updateGeneratedUrl();
+  trackEvent("provider_selected", { provider });
+}
+
+function syncProviderToggle() {
+  const row = document.getElementById("provider-toggle");
+  if (!row) return;
+  for (const seg of row.querySelectorAll<HTMLButtonElement>(".seg")) {
+    seg.classList.toggle("selected", seg.dataset.provider === currentConfig.provider);
+  }
+}
+
+// Shows the Design toggles that belong to the current provider: FACEIT gets a
+// Flag toggle (no Avatar, no in-game Badge — the dial is always shown); Premier
+// gets Avatar + Badge (no Flag).
+function syncProviderRows() {
+  const faceit = currentConfig.provider === "faceit";
+  const set = (id: string, hidden: boolean) => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = hidden;
+  };
+  set("flag-row", !faceit);
+  set("avatar-row", faceit);
+  set("badge-row", faceit);
+}
+
 // Simple display toggles → config keys. Stats and win/loss gate nested controls,
 // so they're bound separately.
 const checkboxMap: Record<string, keyof WidgetConfig> = {
   "show-avatar": "showAvatar",
+  "show-flag": "showFlag",
   "show-name": "showName",
   "show-change": "showChange",
   "show-history": "showMatchHistory",
@@ -346,8 +462,8 @@ function bindStats() {
       currentConfig.stats = currentConfig.stats.filter((k) => k !== key);
     } else {
       if (currentConfig.stats.length >= STAT_MAX) return; // cap enforced
-      // Insert keeping STAT_KEYS order.
-      currentConfig.stats = STAT_KEYS.filter(
+      // Insert keeping the provider's stat order.
+      currentConfig.stats = PROVIDER_STATS[currentConfig.provider].filter(
         (k) => currentConfig.stats.includes(k) || k === key,
       );
     }
@@ -624,16 +740,35 @@ function syncControlsFromConfig() {
     currentConfig.bgColor;
   (document.getElementById("bg-opacity") as HTMLInputElement).value =
     `${currentConfig.bgOpacity}%`;
+
+  // Provider toggle + identity label/placeholder + Avatar-row visibility.
+  const idLabel = document.getElementById("identity-label");
+  if (idLabel) idLabel.textContent = IDENTITY_LABEL[currentConfig.provider];
+  const idInput = document.getElementById("steam-id") as HTMLInputElement;
+  idInput.placeholder = IDENTITY_PLACEHOLDER[currentConfig.provider];
+  syncProviderToggle();
+  syncProviderRows();
 }
 
 function bindControls() {
   const steamInput = document.getElementById("steam-id") as HTMLInputElement;
   steamInput.addEventListener("input", () => {
-    // The raw input may be a URL or vanity name, not a Steam64 ID yet, so clear
-    // the generated URL until resolveAndLoad has a real Steam64 ID to put in it.
-    currentConfig.steamId = "";
-    updateGeneratedUrl();
-    debouncedLoadPreview(steamInput.value);
+    if (currentConfig.provider === "faceit") {
+      // FACEIT: the value is a nickname; resolveAndLoadFaceit reads it directly.
+      debouncedLoadFaceit(steamInput.value);
+    } else {
+      // The raw input may be a URL or vanity name, not a Steam64 ID yet, so clear
+      // the generated URL until resolveAndLoad has a real Steam64 ID to put in it.
+      currentConfig.steamId = "";
+      updateGeneratedUrl();
+      debouncedLoadPreview(steamInput.value);
+    }
+  });
+
+  document.getElementById("provider-toggle")!.addEventListener("click", (e) => {
+    const seg = (e.target as HTMLElement).closest<HTMLButtonElement>(".seg");
+    if (!seg) return;
+    setProvider(seg.dataset.provider === "faceit" ? "faceit" : "leetify");
   });
 
   for (const [id, key] of Object.entries(checkboxMap)) {
@@ -699,10 +834,12 @@ function bindControls() {
 }
 
 function statPillsHtml(): string {
-  return STAT_PILL_ORDER.map(
-    (key) =>
-      `<button type="button" class="pill" data-stat="${key}">${STAT_LABELS[key]}</button>`,
-  ).join("");
+  return PROVIDER_STATS[currentConfig.provider]
+    .map(
+      (key) =>
+        `<button type="button" class="pill" data-stat="${key}">${STAT_LABELS[key]}</button>`,
+    )
+    .join("");
 }
 
 function weightOptionsHtml(): string {
@@ -955,8 +1092,12 @@ function init() {
 
         <div class="setup-body">
           <section class="group group-steam">
-            <h2 class="group-label">STEAM</h2>
+            <h2 class="group-label" id="identity-label">STEAM</h2>
             <input type="text" id="steam-id" class="field-input" placeholder="Steam64 ID, profile link, or vanity name" autocomplete="off" spellcheck="false">
+            <div class="seg-row provider-toggle" id="provider-toggle">
+              <button type="button" class="seg" data-provider="leetify">PREMIER</button>
+              <button type="button" class="seg" data-provider="faceit">FACEIT</button>
+            </div>
           </section>
 
           <div class="divider" role="separator"></div>
@@ -964,9 +1105,10 @@ function init() {
           <section class="group">
             <h2 class="group-label">DESIGN</h2>
             <div class="stack">
+              <label class="check" id="flag-row" hidden><input type="checkbox" id="show-flag"><span class="check-text">Flag</span></label>
               <label class="check"><input type="checkbox" id="show-name"><span class="check-text">Name</span></label>
-              <label class="check"><input type="checkbox" id="show-avatar"><span class="check-text">Avatar</span></label>
-              <label class="check"><input type="checkbox" id="show-badge"><span class="check-text">In-game Styled Badge</span></label>
+              <label class="check" id="avatar-row"><input type="checkbox" id="show-avatar"><span class="check-text">Avatar</span></label>
+              <label class="check" id="badge-row"><input type="checkbox" id="show-badge"><span class="check-text">In-game Styled Badge</span></label>
 
               <div class="dual">
                 <div class="field field-grow">
@@ -1013,7 +1155,7 @@ function init() {
               <div class="check-group">
                 <label class="check"><input type="checkbox" id="show-wl"><span class="check-text">Win Loss Record</span></label>
                 <div class="seg-row" id="wl-mode">
-                  <button type="button" class="seg" data-mode="leetify">LEETIFY</button>
+                  <button type="button" class="seg" data-mode="leetify">TOTAL</button>
                   <button type="button" class="seg" data-mode="live">LIVE SESSION</button>
                 </div>
                 <input type="text" id="live-channel" class="field-input" placeholder="Twitch/Youtube/Kick profile link" autocomplete="off" spellcheck="false" hidden>

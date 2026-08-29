@@ -114,7 +114,7 @@ export type Provider = 'leetify' | 'faceit';
 // FACEIT has no aim rating; Premier (Leetify) has no ADR/HS.
 export const PROVIDER_STATS: Record<Provider, StatKey[]> = {
   leetify: ['kd', 'avg', 'aim', 'winpct'],
-  faceit: ['kd', 'avg', 'winpct', 'adr', 'hs'],
+  faceit: ['kd', 'avg', 'adr', 'winpct', 'hs'],
 };
 
 // The default stat trio per provider. Premier keeps its original K/D·AVG·AIM;
@@ -144,6 +144,9 @@ export interface WidgetConfig {
   livePlatform: '' | LivePlatform;
   liveChannel: string;
   showAvatar: boolean;
+  // FACEIT only: show the country flag before the name (replaces the Avatar
+  // toggle, which FACEIT mode doesn't use — the dial fills the left slot).
+  showFlag: boolean;
   showName: boolean;
   showBadge: boolean;
   showChange: boolean;
@@ -170,6 +173,7 @@ export const DEFAULT_CONFIG: WidgetConfig = {
   livePlatform: '',
   liveChannel: '',
   showAvatar: true,
+  showFlag: true,
   showName: true,
   showBadge: true,
   showChange: false,

@@ -93,25 +93,26 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
   // avatar photo.
   let avatarHtml = '';
   if (isFaceit) {
-    if (config.showBadge) {
-      const dial = faceitDialSvg(data.skillLevel, isChallenger);
-      const posHtml =
-        isChallenger && data.leaderboardPosition != null
-          ? `<span class="faceit-pos">#${data.leaderboardPosition}</span>`
-          : '';
-      avatarHtml = `<div class="faceit-rank">${dial}${posHtml}</div>`;
-    }
+    // The dial is always shown in FACEIT (there's no badge toggle — it's the
+    // rank indicator).
+    const dial = faceitDialSvg(data.skillLevel, isChallenger);
+    const posHtml =
+      isChallenger && data.leaderboardPosition != null
+        ? `<span class="faceit-pos">#${data.leaderboardPosition}</span>`
+        : '';
+    avatarHtml = `<div class="faceit-rank">${dial}${posHtml}</div>`;
   } else {
     const avatarSrc = data.avatarUrl ? esc(data.avatarUrl) : defaultAvatarSrc;
     avatarHtml = config.showAvatar ? `<img class="avatar" src="${avatarSrc}" alt="">` : '';
   }
 
-  // Name, with a country flag before it in FACEIT mode when the API returned a
-  // country (flag-icons 4:3 set; radius applied in CSS).
+  // Name, with a country flag before it in FACEIT mode — gated by the Flag
+  // toggle and present only when the API returned a country (flag-icons 4:3 set;
+  // radius applied in CSS).
   let nameHtml = '';
   if (config.showName) {
     const flag =
-      isFaceit && flagUrl(data.country)
+      isFaceit && config.showFlag && flagUrl(data.country)
         ? `<img class="flag" src="${flagUrl(data.country)}" alt="">`
         : '';
     nameHtml = `<div class="name">${flag}${esc(data.name)}</div>`;
@@ -178,8 +179,8 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
     // Provider drives the rating colour: Premier by rank tier, FACEIT by level.
     isFaceit ? 'provider-faceit' : `rank-${tier.key}`,
     config.showBadge ? 'has-badge' : 'no-badge',
-    // has-avatar controls left-slot spacing; in FACEIT the slot is the dial.
-    (isFaceit ? config.showBadge : config.showAvatar) ? 'has-avatar' : 'no-avatar',
+    // has-avatar controls left-slot spacing; in FACEIT the slot is always the dial.
+    (isFaceit || config.showAvatar) ? 'has-avatar' : 'no-avatar',
     isChallenger ? 'is-challenger' : '',
     // Spread the top row (rank ⇄ W/L) when stats are hidden but history is shown.
     noStatsWithHistory ? 'layout-spread' : '',

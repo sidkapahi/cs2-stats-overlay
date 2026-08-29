@@ -125,6 +125,8 @@ export function configToParams(config: WidgetConfig): URLSearchParams {
     params.set('live', `${config.livePlatform}:${config.liveChannel}`);
   }
   if (!config.showAvatar) params.set('avatar', '0');
+  // Flag defaults ON (FACEIT only); encode the OFF case.
+  if (!config.showFlag) params.set('flag', '0');
   if (!config.showName) params.set('name', '0');
   // Badge defaults OFF now, so encode the ON case explicitly.
   if (config.showBadge) params.set('badge', '1');
@@ -211,6 +213,7 @@ export function paramsToConfig(params: URLSearchParams): WidgetConfig {
     livePlatform: live?.platform ?? '',
     liveChannel: live?.channel ?? '',
     showAvatar: params.get('avatar') !== '0',
+    showFlag: params.get('flag') !== '0',
     showName: params.get('name') !== '0',
     showBadge: params.get('badge') === '1',
     showChange: params.get('change') !== '0',
