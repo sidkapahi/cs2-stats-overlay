@@ -230,31 +230,31 @@ body {
    left slot where Premier shows the avatar. The level number and colour are
    baked into the SVG art. */
 .faceit-rank {
-  position: relative;
-  width: 80px;
-  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   flex-shrink: 0;
 }
 
 .faceit-rank svg {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 80px;
+  height: 80px;
 }
 
-/* Challenger leaderboard position (#528) — a red pill hugging the bottom of the
-   emblem. Only rendered for Challenger-tier players. */
+/* Challenger leaderboard position (#528) — a rounded red pill that overlaps the
+   bottom of the emblem, dark text (Figma 64:830 / 64:834: bg #e80128, text
+   #121212, px-16/py-12 scaled to the 80px dial). Only rendered for Challenger. */
 .faceit-pos {
-  position: absolute;
-  left: 50%;
-  bottom: -6px;
-  transform: translateX(-50%);
-  padding: 2px 9px;
+  position: relative;
+  z-index: 1;
+  margin-top: -16px; /* overlap up into the emblem, like the design's mb-[-26px] */
+  padding: 7px 10px;
   border-radius: 999px;
   background: #e80128;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 800;
+  color: #121212;
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -284,11 +284,12 @@ body {
   font-feature-settings: 'tnum';
 }
 
-/* No-stats + match-history layout: spread the top row so the rank and the W/L
-   pills sit at opposite ends. */
+/* No-stats + match-history layout (Figma 64:776): the top row keeps a natural
+   gap between the rank and the W/L pills rather than being forced to opposite
+   ends. The match-history strip below still spreads (its own justify-between),
+   so the widget sizes to the top row's width. */
 .widget.layout-spread .widget-main {
-  justify-content: space-between;
-  min-width: 560px;
+  gap: 40px;
 }
 
 /* ---- Loading ------------------------------------------------------------ */
