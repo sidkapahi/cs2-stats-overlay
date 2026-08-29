@@ -1,7 +1,7 @@
 import type { PremierData } from './api';
 import { brandLogoSrc } from './brandLogo';
 import { defaultAvatarSrc } from './defaultAvatar';
-import { faceitDialSvg, faceitLevelColor } from './faceitRanks';
+import { challengerColor, faceitDialSvg } from './faceitRanks';
 import { flagUrl } from './flags';
 import { fontStack } from './fonts';
 import { formatRating, getRankTier } from './ranks';
@@ -65,8 +65,8 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
   const ratingText = formatRating(data.rating);
   let ratingHtml: string;
   if (isFaceit) {
-    const color = faceitLevelColor(data.skillLevel, isChallenger);
-    ratingHtml = `<span class="rating-plain faceit-elo" style="color: ${color}">${ratingText}</span>`;
+    // ELO is white for every level/rank (the rank colour lives in the dial).
+    ratingHtml = `<span class="rating-plain faceit-elo">${ratingText}</span>`;
   } else {
     ratingHtml = config.showBadge
       ? `<div class="rating-badge">${badgeSvg(tier)}<span class="rating-badge-text">${ratingText}</span></div>`
@@ -94,11 +94,11 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
   let avatarHtml = '';
   if (isFaceit) {
     // The dial is always shown in FACEIT (there's no badge toggle — it's the
-    // rank indicator).
-    const dial = faceitDialSvg(data.skillLevel, isChallenger);
+    // rank indicator). Challenger #1/#2/#3 recolour the emblem + pill.
+    const dial = faceitDialSvg(data.skillLevel, isChallenger, data.leaderboardPosition);
     const posHtml =
       isChallenger && data.leaderboardPosition != null
-        ? `<span class="faceit-pos">#${data.leaderboardPosition}</span>`
+        ? `<span class="faceit-pos" style="background: ${challengerColor(data.leaderboardPosition)}">#${data.leaderboardPosition}</span>`
         : '';
     avatarHtml = `<div class="faceit-rank">${dial}${posHtml}</div>`;
   } else {

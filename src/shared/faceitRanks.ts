@@ -33,23 +33,21 @@ const DIALS: Record<number, string> = {
   10: level10,
 };
 
-// The accent colour of each level's dial (its arc + baked number), reused to
-// tint the ELO number in FACEIT mode so it matches the rank — level 5's yellow,
-// Challenger's red, etc. Matches FACEIT's own skill-level palette.
-const LEVEL_COLORS: Record<number, string> = {
-  1: '#EEEEEE',
-  2: '#1CE400',
-  3: '#1CE400',
-  4: '#FFC800',
-  5: '#FFC800',
-  6: '#FFC800',
-  7: '#FFC800',
-  8: '#FF6309',
-  9: '#FF6309',
-  10: '#FE1F00',
+// The default Challenger colour (emblem + position pill). The top three
+// leaderboard spots get their own medal colours instead.
+const CHALLENGER_DEFAULT = '#e80128';
+const CHALLENGER_TOP: Record<number, string> = {
+  1: 'rgb(255, 211, 54)', // gold
+  2: 'rgb(222, 245, 255)', // silver / ice
+  3: 'rgb(255, 114, 54)', // bronze
 };
 
-const CHALLENGER_COLOR = '#E80128';
+// The Challenger colour for a leaderboard position — #1/#2/#3 get medal colours,
+// everyone else the default red. Used for both the emblem fill and the position
+// pill background.
+export function challengerColor(position: number | undefined): string {
+  return (position != null && CHALLENGER_TOP[position]) || CHALLENGER_DEFAULT;
+}
 
 // Clamps any skill level to the valid 1–10 range so an unexpected value still
 // resolves to a dial rather than nothing.
@@ -59,14 +57,16 @@ function clampLevel(level: number | undefined): number {
 }
 
 // The dial SVG for a player: the Challenger emblem when they hold a leaderboard
-// position, otherwise the level 1–10 dial.
-export function faceitDialSvg(level: number | undefined, isChallenger: boolean): string {
-  if (isChallenger) return challenger;
+// position, otherwise the level 1–10 dial. For Challenger the emblem's red is
+// recoloured to the position's medal colour (#1/#2/#3); the level dials keep
+// their baked-in colours.
+export function faceitDialSvg(
+  level: number | undefined,
+  isChallenger: boolean,
+  position?: number,
+): string {
+  if (isChallenger) {
+    return challenger.replace(/#e80128/gi, challengerColor(position));
+  }
   return DIALS[clampLevel(level)];
-}
-
-// The accent colour for a player's rank — used for the ELO text tint.
-export function faceitLevelColor(level: number | undefined, isChallenger: boolean): string {
-  if (isChallenger) return CHALLENGER_COLOR;
-  return LEVEL_COLORS[clampLevel(level)];
 }
