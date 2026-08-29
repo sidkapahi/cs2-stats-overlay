@@ -42,6 +42,18 @@ and never reaches the browser. Skip this and the widget still runs — just with
 avatars, and custom-URL links must be entered as a Steam64 ID or a `/profiles/…`
 link instead.
 
+## Optional: FACEIT mode (Cloudflare Worker)
+
+The customizer's **FACEIT** provider (the `PREMIER | FACEIT` toggle) reads FACEIT
+data instead of Leetify/Premier — ELO, skill level, lifetime stats (K/D, win
+rate, ADR, HS%), recent match history, and the Challenger leaderboard position.
+FACEIT's Data API needs a secret key and sends no CORS headers, so it runs behind
+the Cloudflare Worker in [`worker/faceit-proxy.js`](../worker/faceit-proxy.js).
+Deploy it and set `VITE_FACEIT_PROXY_URL` to its URL — full steps (create a
+server-side FACEIT key, deploy, add the secret) are in
+[worker/README.md](../worker/README.md#faceit-proxy-cloudflare-worker). Skip this
+and Premier mode works as before; FACEIT mode just has no data source.
+
 ## Optional: live-status proxies (Twitch / YouTube / Kick)
 
 The live-session W/L feature uses a **separate Cloudflare Worker per platform**
@@ -81,6 +93,7 @@ runs PostHog **cookieless** (no cookies, no storage, no consent banner on stream
 | ------------------------- | -------- | --------------------------------------------------------- |
 | `VITE_LEETIFY_KEY`        | No       | Leetify Public API key — raises rate limits (secret)      |
 | `VITE_AVATAR_PROXY_URL`   | No       | Steam avatar / custom-link proxy Worker URL (public)      |
+| `VITE_FACEIT_PROXY_URL`   | No\*     | FACEIT proxy Worker URL (public) — \*required for FACEIT mode |
 | `VITE_TWITCH_PROXY_URL`   | No       | Twitch live-status proxy Worker URL (public)              |
 | `VITE_YOUTUBE_PROXY_URL`  | No       | YouTube live-status proxy Worker URL (public)             |
 | `VITE_KICK_PROXY_URL`     | No       | Kick live-status proxy Worker URL (public)                |
