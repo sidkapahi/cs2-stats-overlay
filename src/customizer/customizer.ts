@@ -758,11 +758,15 @@ function bindControls() {
   });
 }
 
+// Pill labels use the compact, spaceless forms from the design (Figma 29:674)
+// so they fit a grid cell on one line; the overlay keeps its own STAT_LABELS.
+const PILL_LABEL: Partial<Record<StatKey, string>> = { winpct: "WIN%", hs: "HS%" };
+
 function statPillsHtml(): string {
   return PROVIDER_STATS[currentConfig.provider]
     .map(
       (key) =>
-        `<button type="button" class="pill" data-stat="${key}">${STAT_LABELS[key]}</button>`,
+        `<button type="button" class="pill" data-stat="${key}">${PILL_LABEL[key] ?? STAT_LABELS[key]}</button>`,
     )
     .join("");
 }

@@ -443,7 +443,14 @@ select.field-input {
 }
 
 /* ---- Stat pills / segmented toggle -------------------------------------- */
-.pill-row,
+/* Stat pills: a 4-column grid that wraps to a second row, so the pills keep a
+   consistent size instead of shrinking to squeeze onto one row (Figma 29:674).
+   With 5 options that puts four on row 1 and the fifth on row 2, same width. */
+.pill-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
 .seg-row {
   display: flex;
   gap: 6px;
@@ -471,6 +478,7 @@ select.field-input {
   font-weight: 700;
   font-size: 14px;
   letter-spacing: -0.01em;
+  white-space: nowrap;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
