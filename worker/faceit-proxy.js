@@ -82,10 +82,13 @@ export default {
       return json({ error: 'Missing steam64_id or nickname query parameter' }, 400, cors);
     }
 
-    // Clamp the requested history length to a sane range.
-    const rawHistory = Number(url.searchParams.get('history'));
-    const history = Number.isFinite(rawHistory)
-      ? Math.max(1, Math.min(HISTORY_MAX, Math.trunc(rawHistory)))
+    // Clamp the requested history length to a sane range. When the param is
+    // absent (or not a number) fall back to the default — note `Number(null)`
+    // is 0 (and finite), so the null check has to come first.
+    const rawHistory = url.searchParams.get('history');
+    const parsedHistory = rawHistory === null ? NaN : Number(rawHistory);
+    const history = Number.isFinite(parsedHistory)
+      ? Math.max(1, Math.min(HISTORY_MAX, Math.trunc(parsedHistory)))
       : HISTORY_DEFAULT;
 
     return resolveProfile(steam64, history, env, cors);

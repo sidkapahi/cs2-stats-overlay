@@ -109,6 +109,13 @@ export function parseLiveInput(raw: string): LiveChannel | null {
   return normalizeLiveChannel('twitch', s);
 }
 
+// How many recent matches the FACEIT provider should fetch: 10 when the stats
+// block is shown, 5 when it isn't (per the design — a shorter history strip),
+// bounded by the configured matchCount.
+export function faceitHistoryCount(config: WidgetConfig): number {
+  return config.showStats ? config.matchCount : Math.min(5, config.matchCount);
+}
+
 export function configToParams(config: WidgetConfig): URLSearchParams {
   const params = new URLSearchParams();
   // Identity is the Steam ID for both providers; `provider` selects the data

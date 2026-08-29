@@ -1,7 +1,7 @@
 import { initOverlayAnalytics, trackOverlayEvent } from '../shared/analyticsOverlay';
 import { classifyFetchError, fetchPremierData, type PremierData } from '../shared/api';
 import { fetchFaceitData } from '../shared/faceit';
-import { paramsToConfig } from '../shared/config';
+import { faceitHistoryCount, paramsToConfig } from '../shared/config';
 import { loadFont } from '../shared/fonts';
 import { renderMessage, renderWidget } from '../shared/render';
 import {
@@ -102,7 +102,7 @@ async function init() {
     try {
       lastData =
         config.provider === 'faceit'
-          ? await fetchFaceitData(config.steamId)
+          ? await fetchFaceitData(config.steamId, faceitHistoryCount(config))
           : await fetchPremierData(config.steamId);
       statsHealthy = true;
       render();

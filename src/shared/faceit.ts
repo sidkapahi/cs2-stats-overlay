@@ -87,19 +87,21 @@ export async function resolveFaceitNickname(nickname: string): Promise<string> {
 // to PremierData. Throws Errors whose messages classifyFetchError() (in api.ts)
 // maps to the same analytics reason codes as the Leetify path, so a FACEIT
 // outage is measurable the same way.
-export async function fetchFaceitData(steamId: string): Promise<PremierData> {
+export async function fetchFaceitData(steamId: string, history?: number): Promise<PremierData> {
   const id = steamId.trim();
   if (!id) throw new Error('No Steam ID provided');
   if (!FACEIT_PROXY) {
     throw new Error('need the FACEIT proxy — set VITE_FACEIT_PROXY_URL');
   }
 
+  const params = new URLSearchParams({ steam64_id: id });
+  // How many recent matches to pull (the Worker clamps to 1..20). Driven by the
+  // stats toggle so the history strip gets the right depth.
+  if (history != null && Number.isFinite(history)) params.set('history', String(Math.trunc(history)));
+
   let res: Response;
   try {
-    res = await fetch(
-      `${FACEIT_PROXY}?steam64_id=${encodeURIComponent(id)}`,
-      { cache: 'no-store' },
-    );
+    res = await fetch(`${FACEIT_PROXY}?${params.toString()}`, { cache: 'no-store' });
   } catch {
     throw new Error('Failed to reach the FACEIT proxy');
   }

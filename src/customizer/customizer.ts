@@ -306,7 +306,10 @@ async function loadPreview(token = ++resolveToken) {
   try {
     const data =
       currentConfig.provider === "faceit"
-        ? await fetchFaceitData(currentConfig.steamId)
+        // Fetch up to matchCount so toggling the stats block (which caps the
+        // strip at 5) never needs a re-fetch; the widget itself fetches the
+        // exact 5/10 via faceitHistoryCount.
+        ? await fetchFaceitData(currentConfig.steamId, currentConfig.matchCount)
         : await fetchPremierData(currentConfig.steamId);
     if (token !== resolveToken) return; // superseded by newer input
     previewData = data;
