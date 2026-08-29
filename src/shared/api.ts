@@ -119,16 +119,15 @@ export async function fetchPremierData(steamId: string): Promise<PremierData> {
 
   // Headshot % — Leetify's `accuracy_head` (the share of a player's hits that
   // were headshots, i.e. Leetify's "Headshot Accuracy"), averaged over the
-  // recent matches and normalized to a 0..1 fraction so render.ts can show it
-  // the same way as the FACEIT HS% cell.
+  // recent matches. The API returns it on a 0..100 scale (verified against a
+  // live profile), so divide by 100 to the 0..1 fraction render.ts expects — the
+  // same convention as the FACEIT HS% cell.
   const headVals = recentGames
     .map((g) => g.accuracy_head)
     .filter((v): v is number => typeof v === 'number' && v > 0);
-  let hsPct: number | undefined;
-  if (headVals.length) {
-    const avg = headVals.reduce((s, v) => s + v, 0) / headVals.length;
-    hsPct = avg > 1 ? avg / 100 : avg; // tolerate either 0..1 or 0..100 scale
-  }
+  const hsPct = headVals.length
+    ? headVals.reduce((s, v) => s + v, 0) / headVals.length / 100
+    : undefined;
 
   return {
     name: data.name,
