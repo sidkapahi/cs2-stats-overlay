@@ -225,5 +225,71 @@ body {
   width: auto;
 }
 
+/* ---- FACEIT mode -------------------------------------------------------- */
+/* Rank dial (the level 1–10 skill icon or the Challenger emblem) — occupies the
+   left slot where Premier shows the avatar. The level number and colour are
+   baked into the SVG art. */
+.faceit-rank {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.faceit-rank svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Challenger leaderboard position (#528) — a red pill hugging the bottom of the
+   emblem. Only rendered for Challenger-tier players. */
+.faceit-pos {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #e80128;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Country flag before the player name (flag-icons 4:3). Corner radius is set
+   here, not baked into the art. */
+.name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flag {
+  height: 22px;
+  width: auto;
+  border-radius: 4px;
+  flex-shrink: 0;
+  /* A hairline keeps a white/light flag legible on the dark widget. */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+/* FACEIT ELO colour is set inline (per skill level); tabular figures keep it
+   steady as the number changes. */
+.faceit-elo {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* No-stats + match-history layout: spread the top row so the rank and the W/L
+   pills sit at opposite ends. */
+.widget.layout-spread .widget-main {
+  justify-content: space-between;
+  min-width: 560px;
+}
+
 /* ---- Loading ------------------------------------------------------------ */
 .widget.loading { opacity: 0.6; }
