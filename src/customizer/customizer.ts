@@ -453,14 +453,20 @@ function bindWl() {
     editingLive = true;
   });
   liveField.addEventListener("input", () => {
+    // Update the preview/URL live as they type, but don't track yet: every
+    // keystroke of a bare login is itself a "valid" channel, so tracking here
+    // fires a live_selected per character. Tracking happens on commit (blur).
     applyLiveInput();
-    trackLiveSelected();
     updateGeneratedUrl();
   });
   // Leaving the field (blur) or pressing Enter collapses it into the chip once a
   // valid channel is present.
   liveField.addEventListener("blur", () => {
     editingLive = false;
+    // Commit point: the user has finished typing (blurred or pressed Enter, which
+    // blurs). Track the final channel here so we get one event per real channel
+    // rather than one per keystroke.
+    trackLiveSelected();
     syncWlUi();
   });
   liveField.addEventListener("keydown", (e) => {
@@ -848,6 +854,84 @@ function mountConsentUi() {
   if (!consentDecided()) banner.hidden = false;
 }
 
+// Terms of Service modal. Unlike the privacy modal this has nothing to do with
+// analytics, so it always mounts — the "Terms of Service" footer link opens it.
+function mountTos() {
+  const root = document.createElement("div");
+  root.className = "tos-root";
+  root.innerHTML = `
+    <div class="modal-overlay" id="tos-overlay" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tos-title">
+        <div class="modal-head">
+          <h2 id="tos-title" class="modal-title">Terms of Service</h2>
+          <button type="button" class="modal-close" id="tos-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-updated">Last updated: 2026-08-26</p>
+
+          <h3>The short version</h3>
+          <p>CS2 Stats Overlay is free, open source software provided as is under the MIT License. By using it, you agree to these terms and to the terms of the platforms you connect it to. There are no accounts, no subscriptions, and no fees.</p>
+
+          <h3>Acceptance</h3>
+          <p>These terms are a legal agreement between you and the CS2 Stats Overlay project ("CS2 Stats Overlay", "we") covering the customizer published at <a href="https://cs2widget.kapkit.ca/" target="_blank" rel="noopener">cs2widget.kapkit.ca</a>, the OBS overlay it generates, and the source published at <a href="https://github.com/sidkapahi/cs2-stats-overlay" target="_blank" rel="noopener">github.com/sidkapahi/cs2-stats-overlay</a>. By using CS2 Stats Overlay, you accept these terms. If you do not agree, do not use it.</p>
+
+          <h3>The software and your license</h3>
+          <p>CS2 Stats Overlay is released under the <a href="https://github.com/sidkapahi/cs2-stats-overlay/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>. That license governs your right to use, copy, modify, and distribute the software, and it prevails if anything here appears to conflict with it. You may run CS2 Stats Overlay for personal or commercial streaming at no cost.</p>
+
+          <h3>Stats and connected platforms are your responsibility</h3>
+          <p>CS2 Stats Overlay reads your public CS2 stats from <a href="https://leetify.com" target="_blank" rel="noopener">Leetify</a> using the Steam profile you point it at, and it can check whether a channel you enter is live on Twitch, YouTube, or Kick. You are responsible for using those services within their own terms and for having the rights to the accounts and profile you connect:</p>
+          <ul>
+            <li><a href="https://leetify.com/terms-of-service" target="_blank" rel="noopener">Leetify Terms of Service</a></li>
+            <li><a href="https://www.twitch.tv/p/legal/terms-of-service/" target="_blank" rel="noopener">Twitch Terms of Service</a></li>
+            <li><a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube Terms of Service</a> and the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a></li>
+            <li><a href="https://kick.com/terms-of-service" target="_blank" rel="noopener">Kick Terms of Service</a></li>
+          </ul>
+          <p>CS2 Stats Overlay is an independent project and is not affiliated with, endorsed by, or sponsored by Valve, Steam, Leetify, Twitch, YouTube, Google, Kick, or OBS. All product names and logos are the property of their respective owners.</p>
+
+          <h3>Acceptable use</h3>
+          <p>Use CS2 Stats Overlay lawfully and only with accounts and profiles you are entitled to access. Do not use it to violate any platform's terms, to misrepresent data, or to interfere with the services it connects to. You are responsible for how you display and use the stats it produces on your stream.</p>
+
+          <h3>No warranty</h3>
+          <p>CS2 Stats Overlay is provided "as is" and "as available", without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement. We do not warrant that the overlay will be uninterrupted, error free, or that stats and live status will always be accurate or available, since they depend on third-party services outside our control.</p>
+
+          <h3>Limitation of liability</h3>
+          <p>To the maximum extent permitted by law, in no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with CS2 Stats Overlay or the use of or other dealings in it. Because the tool is free, you assume responsibility for how you use it.</p>
+
+          <h3>Privacy</h3>
+          <p>How the customizer handles data is described in the <a href="#" id="tos-privacy-link">Privacy &amp; Cookies</a> notice, which is part of these terms.</p>
+
+          <h3>Changes to these terms</h3>
+          <p>These terms may be updated as the tool evolves. The current version is always posted here with the "last updated" date above. Continuing to use CS2 Stats Overlay after a change means you accept the revised terms.</p>
+
+          <h3>Contact</h3>
+          <p>Questions about these terms? Email <a class="modal-mail" href="mailto:hey@sidkapahi.com">hey@sidkapahi.com</a>, or open an issue on <a href="https://github.com/sidkapahi/cs2-stats-overlay/issues" target="_blank" rel="noopener">GitHub</a>.</p>
+
+          <p class="modal-fine">This notice is provided in good faith and isn't legal advice.</p>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(root);
+
+  const overlay = root.querySelector<HTMLElement>("#tos-overlay")!;
+  const open = () => { overlay.hidden = false; };
+  const close = () => { overlay.hidden = true; };
+
+  document.getElementById("open-tos")?.addEventListener("click", open);
+  root.querySelector("#tos-close")!.addEventListener("click", close);
+  root.querySelector("#tos-privacy-link")!.addEventListener("click", (e) => {
+    e.preventDefault();
+    close();
+    document.getElementById("open-privacy")?.dispatchEvent(new MouseEvent("click"));
+  });
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+  });
+}
+
 function init() {
   // Customizer analytics: cookie-based, but starts opted out — nothing is
   // captured until the visitor accepts via the consent banner (mounted below).
@@ -953,7 +1037,11 @@ function init() {
         <div class="setup-foot">
           <img class="foot-logo" src="${brandLogoSrc}" alt="kapKit">
           <span class="foot-tag">Made with ❤️ in Toronto</span>
-          <button type="button" class="foot-link" id="open-privacy">Privacy &amp; Cookies</button>
+          <div class="foot-legal">
+            <button type="button" class="foot-link" id="open-privacy">Privacy &amp; Cookies</button>
+            <span class="foot-sep" aria-hidden="true">·</span>
+            <button type="button" class="foot-link" id="open-tos">Terms of Service</button>
+          </div>
         </div>
       </aside>
 
@@ -983,6 +1071,7 @@ function init() {
   bindControls();
   syncControlsFromConfig();
   mountConsentUi();
+  mountTos();
 
   // Re-fit the preview when the responsive layout changes the panel size.
   window.addEventListener("resize", fitPreview);

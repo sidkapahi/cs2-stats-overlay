@@ -18,6 +18,27 @@ const POSTHOG_HOST: string =
   import.meta.env.VITE_POSTHOG_HOST || "https://us.i.posthog.com";
 const ENABLED = !!POSTHOG_KEY;
 
+// When events are routed through a reverse proxy on our own domain (api_host set
+// to e.g. https://t.kapkit.ca via PostHog's managed reverse proxy — see
+// docs/ANALYTICS.md), posthog-js can no longer infer which PostHog app the
+// customizer's toolbar / "open in PostHog" links should point at. `ui_host`
+// tells it explicitly. When api_host is a real *.posthog.com ingestion host we
+// return undefined and let posthog-js derive the app host itself (its US/EU
+// default is already correct), so this stays a no-op when the proxy isn't used.
+function deriveUiHost(apiHost: string): string | undefined {
+  try {
+    const host = new URL(apiHost).hostname;
+    if (/\.posthog\.com$/i.test(host)) return undefined;
+    // Custom proxy: this project targets US PostHog, whose app lives at
+    // us.posthog.com. EU forks: change this to https://eu.posthog.com.
+    return "https://us.posthog.com";
+  } catch {
+    return undefined;
+  }
+}
+
+const POSTHOG_UI_HOST = deriveUiHost(POSTHOG_HOST);
+
 let started = false;
 
 // Cookie-based, but starts OPTED OUT — nothing is captured until the visitor
@@ -28,6 +49,9 @@ export function initAnalytics() {
 
   const config: Partial<PostHogConfig> = {
     api_host: POSTHOG_HOST,
+    // Only set when api_host is our reverse proxy; undefined otherwise (see
+    // deriveUiHost) so posthog-js keeps its own correct default.
+    ...(POSTHOG_UI_HOST ? { ui_host: POSTHOG_UI_HOST } : {}),
     autocapture: false, // we send explicit, named events only
     disable_session_recording: true,
     advanced_disable_feature_flags: true,
