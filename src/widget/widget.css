@@ -249,12 +249,15 @@ body {
   position: relative;
   z-index: 1;
   margin-top: -16px; /* overlap up into the emblem, like the design's mb-[-26px] */
-  padding: 7px 10px;
+  /* Sides ~1.3x the top/bottom, matching the Figma's 12/16 padding ratio. */
+  padding: 6px 8px;
   border-radius: 999px;
   background: #e80128;
   color: #121212;
   font-size: 14px;
-  font-weight: 700;
+  /* Match the heavier weight used by the ELO/rating so it reads clearly bold
+     (dark text on the red reads lighter than the old white did at this size). */
+  font-weight: var(--w-weight-strong, 800);
   line-height: 1;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
