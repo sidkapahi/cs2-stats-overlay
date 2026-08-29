@@ -74,17 +74,10 @@ const ICON_COPY = `<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="t
 const ICON_CHECK = `<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,0,1,17-17L96,183.51,215.51,63.51a12,12,0,0,1,17,17Z"/></svg>`;
 const ICON_WARNING = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>`;
 
-// Prompt shown in the preview before an identity resolves, per provider.
-const PROMPT_BY_PROVIDER: Record<Provider, string> = {
-  leetify: "ENTER YOUR STEAM NAME OR PROFILE LINK",
-  faceit: "ENTER YOUR FACEIT NICKNAME",
-};
-// Identity input label + placeholder per provider.
-const IDENTITY_LABEL: Record<Provider, string> = { leetify: "STEAM", faceit: "FACEIT" };
-const IDENTITY_PLACEHOLDER: Record<Provider, string> = {
-  leetify: "Steam64 ID, profile link, or vanity name",
-  faceit: "FACEIT nickname",
-};
+// Prompt shown in the preview before a Steam ID resolves. Both providers are
+// keyed by the same Steam identity, so the input never changes — the PREMIER |
+// FACEIT toggle only switches which data source is shown.
+const PROMPT_TEXT = "ENTER YOUR STEAM NAME OR PROFILE LINK";
 
 let currentConfig: WidgetConfig = { ...DEFAULT_CONFIG, stats: [...DEFAULT_CONFIG.stats] };
 
@@ -187,13 +180,13 @@ function renderPreview() {
     // prompt card so the panel never looks broken.
     body.innerHTML = previewData
       ? renderWidget(currentConfig, previewData)
-      : promptCardHtml(PROMPT_BY_PROVIDER[currentConfig.provider]);
+      : promptCardHtml(PROMPT_TEXT);
   } else {
     banner.hidden = true;
     if (previewLoading) {
       body.innerHTML = renderMessage("Loading", "…");
     } else if (!previewData) {
-      body.innerHTML = promptCardHtml(PROMPT_BY_PROVIDER[currentConfig.provider]);
+      body.innerHTML = promptCardHtml(PROMPT_TEXT);
     } else {
       body.innerHTML = renderWidget(currentConfig, previewData);
     }
@@ -202,17 +195,9 @@ function renderPreview() {
   fitPreview();
 }
 
-// Whether the current provider has an identity entered (a Steam ID / FACEIT
-// nickname), which gates the generated URL and export.
-function hasIdentity(): boolean {
-  return currentConfig.provider === "faceit"
-    ? !!currentConfig.faceitNickname
-    : !!currentConfig.steamId;
-}
-
 function updateGeneratedUrl() {
   const urlEl = document.getElementById("generated-url") as HTMLInputElement;
-  const url = hasIdentity() ? getWidgetUrl() : "";
+  const url = currentConfig.steamId ? getWidgetUrl() : "";
   urlEl.value = url;
 
   const zipBtn = document.getElementById("export-zip") as HTMLButtonElement | null;
@@ -291,7 +276,10 @@ async function loadPreview(token = ++resolveToken) {
   renderPreview();
 
   try {
-    const data = await fetchPremierData(currentConfig.steamId);
+    const data =
+      currentConfig.provider === "faceit"
+        ? await fetchFaceitData(currentConfig.steamId)
+        : await fetchPremierData(currentConfig.steamId);
     if (token !== resolveToken) return; // superseded by newer input
     previewData = data;
     if (currentConfig.steamId !== lastTrackedSteamId) {
@@ -316,65 +304,13 @@ function debouncedLoadPreview(rawInput: string) {
   debounceTimer = setTimeout(() => resolveAndLoad(rawInput), 600);
 }
 
-// FACEIT preview: no vanity round-trip — the nickname goes straight to the
-// FACEIT proxy Worker, which resolves it and returns the full payload.
-async function resolveAndLoadFaceit(rawInput: string) {
-  const token = ++resolveToken;
-  const nick = rawInput.trim();
-  currentConfig.faceitNickname = nick;
-  updateGeneratedUrl();
-
-  if (!nick) {
-    previewData = null;
-    previewError = null;
-    previewLoading = false;
-    renderPreview();
-    return;
-  }
-
-  previewLoading = true;
-  previewError = null;
-  renderPreview();
-
-  try {
-    const data = await fetchFaceitData(nick);
-    if (token !== resolveToken) return; // superseded by newer input
-    previewData = data;
-    if (nick !== lastTrackedSteamId) {
-      trackEvent("steam_id_entered"); // funnel count; no nickname sent
-      lastTrackedSteamId = nick;
-    }
-  } catch (e) {
-    if (token !== resolveToken) return; // superseded by newer input
-    trackEvent("preview_error", { stage: "stats", reason: classifyFetchError(e) });
-    previewError = e instanceof Error ? e.message : "Failed to load";
-    previewData = null;
-  }
-  previewLoading = false;
-  renderPreview();
-  updateGeneratedUrl();
-}
-
-function debouncedLoadFaceit(rawInput: string) {
-  if (debounceTimer) clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => resolveAndLoadFaceit(rawInput), 600);
-}
-
-// Switches the active provider: swaps the identity label/input, resets the stat
-// trio + pills to that provider's default, clears the entered identity and
-// preview, and hides the Avatar toggle in FACEIT (the dial fills the left slot).
+// Switches the active data source. The Steam identity and its input stay put —
+// only the stat trio/pills, the provider-specific Design rows, and the preview's
+// data source change. Re-fetches the current Steam ID against the new provider.
 function setProvider(provider: Provider) {
   if (currentConfig.provider === provider) return;
   currentConfig.provider = provider;
-  currentConfig.steamId = "";
-  currentConfig.faceitNickname = "";
   currentConfig.stats = [...DEFAULT_STATS_BY_PROVIDER[provider]];
-
-  const label = document.getElementById("identity-label");
-  if (label) label.textContent = IDENTITY_LABEL[provider];
-  const input = document.getElementById("steam-id") as HTMLInputElement;
-  input.placeholder = IDENTITY_PLACEHOLDER[provider];
-  input.value = "";
 
   const pills = document.getElementById("stats-pills");
   if (pills) pills.innerHTML = statPillsHtml();
@@ -382,11 +318,8 @@ function setProvider(provider: Provider) {
   syncProviderToggle();
   syncProviderRows();
 
-  previewData = null;
-  previewError = null;
-  previewLoading = false;
-  lastTrackedSteamId = null;
-  renderPreview();
+  if (currentConfig.steamId) loadPreview();
+  else renderPreview();
   updateGeneratedUrl();
   trackEvent("provider_selected", { provider });
 }
@@ -741,11 +674,7 @@ function syncControlsFromConfig() {
   (document.getElementById("bg-opacity") as HTMLInputElement).value =
     `${currentConfig.bgOpacity}%`;
 
-  // Provider toggle + identity label/placeholder + Avatar-row visibility.
-  const idLabel = document.getElementById("identity-label");
-  if (idLabel) idLabel.textContent = IDENTITY_LABEL[currentConfig.provider];
-  const idInput = document.getElementById("steam-id") as HTMLInputElement;
-  idInput.placeholder = IDENTITY_PLACEHOLDER[currentConfig.provider];
+  // Provider toggle + the provider-specific Design rows (Flag vs Avatar/Badge).
   syncProviderToggle();
   syncProviderRows();
 }
@@ -753,16 +682,12 @@ function syncControlsFromConfig() {
 function bindControls() {
   const steamInput = document.getElementById("steam-id") as HTMLInputElement;
   steamInput.addEventListener("input", () => {
-    if (currentConfig.provider === "faceit") {
-      // FACEIT: the value is a nickname; resolveAndLoadFaceit reads it directly.
-      debouncedLoadFaceit(steamInput.value);
-    } else {
-      // The raw input may be a URL or vanity name, not a Steam64 ID yet, so clear
-      // the generated URL until resolveAndLoad has a real Steam64 ID to put in it.
-      currentConfig.steamId = "";
-      updateGeneratedUrl();
-      debouncedLoadPreview(steamInput.value);
-    }
+    // The raw input may be a URL or vanity name, not a Steam64 ID yet, so clear
+    // the generated URL until resolveAndLoad has a real Steam64 ID to put in it.
+    // Both providers resolve the same way — only the data source differs.
+    currentConfig.steamId = "";
+    updateGeneratedUrl();
+    debouncedLoadPreview(steamInput.value);
   });
 
   document.getElementById("provider-toggle")!.addEventListener("click", (e) => {

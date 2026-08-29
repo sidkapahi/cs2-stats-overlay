@@ -60,8 +60,10 @@ Powers the widget's **FACEIT mode** (the `PREMIER | FACEIT` toggle in the
 customizer). FACEIT's Data API needs a secret `Authorization: Bearer <key>`
 header and sends no CORS headers, so — like the Steam key — it can't be called
 from the static site. This Worker (`faceit-proxy.js`) keeps the key server-side
-and, in a single request, resolves a FACEIT nickname to everything the overlay
-needs: ELO + skill level, lifetime stats (K/D, win rate, ADR, HS%), the recent
+and, in a single request, resolves a Steam64 ID to everything the overlay needs
+(a CS2 player's FACEIT `game_player_id` is their Steam ID, so the widget keeps
+one identity input): ELO + skill level, lifetime stats (K/D, win rate, ADR, HS%),
+the recent
 match list with per-match kills/deaths, and — for Challenger-tier players — the
 leaderboard position. FACEIT has no batched per-match-stats endpoint, so this
 chaining is done on the Worker, keeping the browser to one call.
@@ -231,10 +233,12 @@ GET /?vanity=gabelogannewell
 A name with no matching profile returns `404 { "error": … }`; invalid names
 return `400`.
 
-**FACEIT profile** (`faceit-proxy.js`):
+**FACEIT profile** (`faceit-proxy.js`) — keyed by Steam64 ID (a CS2 player's
+FACEIT `game_player_id` is their Steam ID), so the widget uses the same identity
+for Premier and FACEIT:
 
 ```
-GET /?nickname=s1mple&history=10
+GET /?steam64_id=76561198034202275&history=10
 → 200 {
     "nickname": "s1mple", "playerId": "…", "country": "ua",
     "avatarUrl": "https://…", "elo": 3200, "level": 10, "region": "EU",
@@ -249,9 +253,10 @@ GET /?nickname=s1mple&history=10
 
 `history` is optional (default 10, capped at 20). Lifetime fields the API
 doesn't expose come back `null`; a per-match stat that can't be fetched leaves
-that match's `kills`/`deaths` `null` but keeps its `outcome`. An unknown
-nickname returns `404`, an invalid one `400`, and a missing `FACEIT_API_KEY`
-`500`. Successful responses are cached ~30s; errors are never cached.
+that match's `kills`/`deaths` `null` but keeps its `outcome`. A Steam account
+with no FACEIT CS2 profile returns `404`, an invalid `steam64_id` `400`, and a
+missing `FACEIT_API_KEY` `500`. Successful responses are cached ~30s; errors are
+never cached.
 
 **Live status** (each platform's Worker, keyed by its own param):
 

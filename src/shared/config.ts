@@ -111,14 +111,10 @@ export function parseLiveInput(raw: string): LiveChannel | null {
 
 export function configToParams(config: WidgetConfig): URLSearchParams {
   const params = new URLSearchParams();
-  // Data source + identity. FACEIT mode is keyed by nickname (`fn`); Premier
-  // (the default) by Steam ID. `provider` is only encoded for the non-default.
-  if (config.provider === 'faceit') {
-    params.set('provider', 'faceit');
-    params.set('fn', config.faceitNickname);
-  } else {
-    params.set('steamId', config.steamId);
-  }
+  // Identity is the Steam ID for both providers; `provider` selects the data
+  // source and is only encoded for the non-default (FACEIT).
+  params.set('steamId', config.steamId);
+  if (config.provider === 'faceit') params.set('provider', 'faceit');
   // The live source drives session-scoped W/L; only include it when set. Encoded
   // as `live=<platform>:<channel>`, e.g. `live=twitch:kapowhi`.
   if (config.livePlatform && config.liveChannel) {
@@ -169,7 +165,6 @@ export function configToParams(config: WidgetConfig): URLSearchParams {
 export function settingsFingerprint(config: WidgetConfig): string {
   const params = configToParams(config);
   params.delete('steamId');
-  params.delete('fn');
   params.delete('live');
   params.sort();
   return params.toString() || 'defaults';
@@ -209,7 +204,6 @@ export function paramsToConfig(params: URLSearchParams): WidgetConfig {
   return {
     provider,
     steamId: params.get('steamId') ?? DEFAULT_CONFIG.steamId,
-    faceitNickname: params.get('fn') ?? DEFAULT_CONFIG.faceitNickname,
     livePlatform: live?.platform ?? '',
     liveChannel: live?.channel ?? '',
     showAvatar: params.get('avatar') !== '0',

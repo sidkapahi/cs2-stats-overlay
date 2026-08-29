@@ -5,10 +5,12 @@
 // and doesn't send CORS headers, so the browser would both leak the key and be
 // blocked. This Worker keeps the key server-side (adding CORS) and answers a
 // single lookup that returns everything the FACEIT overlay needs in one call:
-//   • GET ?nickname=<faceit-nick>[&history=<n>]  → combined player payload
+//   • GET ?steam64_id=<17-digit id>[&history=<n>]  → combined player payload
 //
+// Keyed by Steam64 ID (a CS2 player's FACEIT game_player_id is their Steam64
+// ID), so the widget keeps one identity input and just toggles Premier ⇄ FACEIT.
 // FACEIT has no batched endpoint for per-match stats (unlike Leetify), so the
-// chain — resolve nickname → player, lifetime stats, recent history, per-match
+// chain — resolve Steam ID → player, lifetime stats, recent history, per-match
 // kills/deaths/ADR/HS, and (for Challenger) the leaderboard position — is done
 // here, server-side, so the browser still makes just one request instead of the
 // N+1 it would otherwise need. It's deliberately a separate Worker from the
@@ -68,9 +70,9 @@ export default {
     }
 
     const url = new URL(request.url);
-    const nickname = url.searchParams.get('nickname');
-    if (nickname === null) {
-      return json({ error: 'Missing nickname query parameter' }, 400, cors);
+    const steam64 = url.searchParams.get('steam64_id');
+    if (steam64 === null) {
+      return json({ error: 'Missing steam64_id query parameter' }, 400, cors);
     }
 
     // Clamp the requested history length to a sane range.
@@ -79,20 +81,21 @@ export default {
       ? Math.max(1, Math.min(HISTORY_MAX, Math.trunc(rawHistory)))
       : HISTORY_DEFAULT;
 
-    return resolveProfile(nickname, history, env, cors);
+    return resolveProfile(steam64, history, env, cors);
   },
 };
 
-// Resolves a FACEIT nickname to the full overlay payload: player identity + ELO
-// + level, lifetime stats, recent matches (with per-match kills/deaths/ADR/HS),
-// and — for Challenger-tier players — their leaderboard position.
-async function resolveProfile(rawNickname, history, env, cors) {
-  const nickname = rawNickname.trim();
-  // FACEIT nicknames are letters/digits and a small set of punctuation, up to
-  // ~30 chars. Reject anything else so the Worker can't be used to smuggle
-  // arbitrary query params into the FACEIT API.
-  if (!/^[A-Za-z0-9_.\-[\]|]{1,32}$/.test(nickname)) {
-    return json({ error: 'Invalid FACEIT nickname' }, 400, cors);
+// Resolves a Steam64 ID to the full FACEIT overlay payload: player identity +
+// ELO + level, lifetime stats, recent matches (with per-match kills/deaths/ADR/
+// HS), and — for Challenger-tier players — their leaderboard position. The same
+// Steam ID drives Premier mode, so the widget keeps a single identity input and
+// just toggles the data source.
+async function resolveProfile(rawSteam64, history, env, cors) {
+  const steam64 = rawSteam64.trim();
+  // Steam64 IDs are 17-digit numbers; reject anything else so the Worker can't
+  // be used as an open proxy for arbitrary FACEIT API calls.
+  if (!/^\d{17}$/.test(steam64)) {
+    return json({ error: 'Invalid steam64_id' }, 400, cors);
   }
 
   if (!env.FACEIT_API_KEY) {
@@ -100,15 +103,16 @@ async function resolveProfile(rawNickname, history, env, cors) {
   }
   const auth = { headers: { Authorization: `Bearer ${env.FACEIT_API_KEY}` } };
 
-  // 1. Resolve the nickname to a player. cs2-scoped so `games.cs2` is present.
+  // 1. Resolve the Steam ID to a FACEIT player. For CS2 a player's FACEIT
+  // `game_player_id` is their Steam64 ID, so this looks them up directly.
   let player;
   try {
     const res = await fetch(
-      `${FACEIT_BASE}/players?nickname=${encodeURIComponent(nickname)}&game=cs2`,
+      `${FACEIT_BASE}/players?game=cs2&game_player_id=${encodeURIComponent(steam64)}`,
       auth,
     );
     if (res.status === 404) {
-      return json({ error: 'No FACEIT player found for that nickname' }, 404, cors);
+      return json({ error: 'No FACEIT player found for that Steam account' }, 404, cors);
     }
     if (!res.ok) return json({ error: `FACEIT API error: ${res.status}` }, 502, cors);
     player = await res.json();
@@ -135,7 +139,7 @@ async function resolveProfile(rawNickname, history, env, cors) {
 
   return json(
     {
-      nickname: player.nickname ?? nickname,
+      nickname: player.nickname ?? '',
       playerId,
       country: typeof player.country === 'string' ? player.country.toLowerCase() : null,
       avatarUrl: typeof player.avatar === 'string' ? player.avatar : '',

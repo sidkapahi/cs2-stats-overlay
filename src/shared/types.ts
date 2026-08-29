@@ -129,12 +129,11 @@ export const DEFAULT_STATS_BY_PROVIDER: Record<Provider, StatKey[]> = {
 export type LivePlatform = 'twitch' | 'youtube' | 'kick';
 
 export interface WidgetConfig {
-  // Data source. 'leetify' (Premier, keyed by steamId) is the default;
-  // 'faceit' reads the FACEIT provider, keyed by faceitNickname.
+  // Data source. Both providers are keyed by the same Steam ID — 'leetify'
+  // (Premier, the default) reads Leetify; 'faceit' reads the FACEIT provider
+  // (the Worker resolves the Steam ID to the FACEIT player).
   provider: Provider;
   steamId: string;
-  // FACEIT nickname, used only when provider === 'faceit'.
-  faceitNickname: string;
   // Live-session source. When a platform + channel are set, the W/L pills become
   // session-scoped: they reset when the channel goes live and freeze (keeping the
   // last session's record) when it goes offline. Empty platform = the old
@@ -169,7 +168,6 @@ export interface WidgetConfig {
 export const DEFAULT_CONFIG: WidgetConfig = {
   provider: 'leetify',
   steamId: '',
-  faceitNickname: '',
   livePlatform: '',
   liveChannel: '',
   showAvatar: true,
