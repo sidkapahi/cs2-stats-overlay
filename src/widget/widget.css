@@ -255,9 +255,10 @@ body {
   background: #e80128;
   color: #121212;
   font-size: 14px;
-  /* Match the heavier weight used by the ELO/rating so it reads clearly bold
-     (dark text on the red reads lighter than the old white did at this size). */
-  font-weight: var(--w-weight-strong, 800);
+  /* Extra-bold (900), heavier than the rest of the widget, so the position pill
+     pops. Hardcoded (not the config-driven weight) so it stays extra-bold even
+     if the widget's font weight is set lighter. */
+  font-weight: 900;
   line-height: 1;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
