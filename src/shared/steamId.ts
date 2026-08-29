@@ -45,6 +45,63 @@ export function parseSteamInput(raw: string): SteamInput {
   return { kind: "invalid" };
 }
 
+// A parsed "Account" input — the universal field that accepts a Steam identity
+// OR a FACEIT identity. Everything ultimately resolves to a Steam64 ID (both
+// providers key off it); the resolution itself is done in the customizer since
+// vanity/FACEIT lookups need the proxy Workers.
+export type AccountInput =
+  | { kind: 'id'; steamId: string } // ready-to-use Steam64 ID
+  | { kind: 'steamVanity'; vanity: string } // steamcommunity.com/id/<name>
+  | { kind: 'faceit'; nickname: string } // faceit.com/.../players/<nick>
+  | { kind: 'ambiguous'; token: string } // a bare word — could be either
+  | { kind: 'empty' }
+  | { kind: 'invalid' };
+
+// FACEIT nicknames are letters, digits, and a small set of punctuation.
+const FACEIT_NICK_RE = /^[A-Za-z0-9_.\-[\]|~]{1,64}$/;
+
+// Pulls the nickname out of a FACEIT profile link, e.g.
+// https://www.faceit.com/en/players/s1mple (optionally with a trailing path or
+// a two-letter locale segment). Returns null when it isn't a FACEIT link.
+function faceitNicknameFromUrl(input: string): string | null {
+  const m = /faceit\.com\/(?:[a-z]{2}\/)?players(?:-modal)?\/([^/?#]+)/i.exec(input);
+  if (!m) return null;
+  const nick = decodeURIComponent(m[1]);
+  return FACEIT_NICK_RE.test(nick) ? nick : null;
+}
+
+// Classifies whatever a user types in the Account field. Explicit forms are
+// unambiguous (a steamcommunity.com or faceit.com link, a 17-digit Steam64 ID);
+// a bare word could be a Steam vanity or a FACEIT nickname, so it's returned as
+// `ambiguous` for the customizer to resolve (it tries the current provider's
+// source first, then the other).
+export function parseAccountInput(raw: string): AccountInput {
+  const input = raw.trim();
+  if (!input) return { kind: 'empty' };
+
+  // FACEIT profile link.
+  const faceitNick = faceitNicknameFromUrl(input);
+  if (faceitNick) return { kind: 'faceit', nickname: faceitNick };
+  if (/faceit\.com/i.test(input)) return { kind: 'invalid' }; // a FACEIT URL we couldn't read
+
+  // A Steam URL is unambiguously Steam — reuse parseSteamInput for /profiles/
+  // (→ id) and /id/<name> (→ vanity).
+  if (/^https?:\/\//i.test(input) || /^steamcommunity\.com\//i.test(input)) {
+    const steam = parseSteamInput(input);
+    if (steam.kind === 'id') return { kind: 'id', steamId: steam.steamId };
+    if (steam.kind === 'vanity') return { kind: 'steamVanity', vanity: steam.vanity };
+    return { kind: 'invalid' };
+  }
+
+  // A bare word: a 17-digit Steam64, or an ambiguous name. Match the FACEIT
+  // charset (a superset of Steam vanities), so a FACEIT-only nickname like
+  // `big|clan` still resolves; the customizer disambiguates by provider.
+  if (/^\d{17}$/.test(input)) return { kind: 'id', steamId: input };
+  if (/^\d+$/.test(input)) return { kind: 'invalid' }; // an incomplete numeric id
+  if (FACEIT_NICK_RE.test(input)) return { kind: 'ambiguous', token: input };
+  return { kind: 'invalid' };
+}
+
 // Returns the path of a steamcommunity.com URL, or null if the input isn't one.
 // Accepts inputs without a scheme (e.g. a pasted "steamcommunity.com/id/foo").
 function tryParseSteamPath(input: string): string | null {

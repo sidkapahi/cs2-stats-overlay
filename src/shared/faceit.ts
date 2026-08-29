@@ -59,6 +59,29 @@ function toGame(m: FaceitMatch): LeetifyGame {
   };
 }
 
+// Resolves a FACEIT nickname to the player's Steam64 ID via the Worker, so the
+// Account field can accept a FACEIT nickname / profile link and still key the
+// rest of the app (both providers) off a Steam ID. Throws friendly messages the
+// customizer can surface.
+export async function resolveFaceitNickname(nickname: string): Promise<string> {
+  const nick = nickname.trim();
+  if (!nick) throw new Error('No FACEIT nickname provided');
+  if (!FACEIT_PROXY) {
+    throw new Error('FACEIT accounts need the FACEIT proxy — set VITE_FACEIT_PROXY_URL');
+  }
+  let res: Response;
+  try {
+    res = await fetch(`${FACEIT_PROXY}?nickname=${encodeURIComponent(nick)}`, { cache: 'no-store' });
+  } catch {
+    throw new Error('Failed to reach the FACEIT proxy');
+  }
+  if (res.status === 404) throw new Error("Couldn't find that FACEIT account");
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  const body = (await res.json()) as { steamId?: unknown };
+  if (typeof body.steamId === 'string' && /^\d{17}$/.test(body.steamId)) return body.steamId;
+  throw new Error("Couldn't resolve that FACEIT account");
+}
+
 // Fetches a FACEIT player's overlay data by Steam64 ID (the same identity
 // Premier uses — the Worker resolves it to the FACEIT player) and normalizes it
 // to PremierData. Throws Errors whose messages classifyFetchError() (in api.ts)

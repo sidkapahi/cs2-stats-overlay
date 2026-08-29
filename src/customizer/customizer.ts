@@ -13,7 +13,7 @@ import {
   resolveVanityUrl,
   type PremierData,
 } from "../shared/api";
-import { fetchFaceitData } from "../shared/faceit";
+import { fetchFaceitData, resolveFaceitNickname } from "../shared/faceit";
 import { brandLogoSrc } from "../shared/brandLogo";
 import {
   configToParams,
@@ -32,7 +32,7 @@ import {
   twitchMark,
   youTubeMark,
 } from "../shared/socialLogos";
-import { parseSteamInput } from "../shared/steamId";
+import { parseAccountInput, type AccountInput } from "../shared/steamId";
 import {
   DEFAULT_CONFIG,
   DEFAULT_STATS_BY_PROVIDER,
@@ -77,7 +77,7 @@ const ICON_WARNING = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 // Prompt shown in the preview before a Steam ID resolves. Both providers are
 // keyed by the same Steam identity, so the input never changes — the PREMIER |
 // FACEIT toggle only switches which data source is shown.
-const PROMPT_TEXT = "ENTER YOUR STEAM NAME OR PROFILE LINK";
+const PROMPT_TEXT = "ENTER YOUR STEAM OR FACEIT ACCOUNT";
 
 let currentConfig: WidgetConfig = { ...DEFAULT_CONFIG, stats: [...DEFAULT_CONFIG.stats] };
 
@@ -207,11 +207,12 @@ function updateGeneratedUrl() {
   if (bar) bar.classList.toggle("is-empty", !url);
 }
 
-// Turns whatever is in the Steam-ID box (a raw Steam64 ID, a full profile URL,
-// or a custom /id/ vanity URL) into a Steam64 ID, then loads the preview for it.
+// Turns whatever is in the Account box — a Steam64 ID, a Steam profile/vanity
+// link, a bare word, a FACEIT profile link, or a FACEIT nickname — into a
+// Steam64 ID (both providers key off it), then loads the preview.
 async function resolveAndLoad(rawInput: string) {
   const token = ++resolveToken;
-  const parsed = parseSteamInput(rawInput);
+  const parsed = parseAccountInput(rawInput);
 
   if (parsed.kind === "empty") {
     currentConfig.steamId = "";
@@ -226,21 +227,23 @@ async function resolveAndLoad(rawInput: string) {
   if (parsed.kind === "invalid") {
     currentConfig.steamId = "";
     previewData = null;
-    previewError = "Enter a Steam64 ID or a steamcommunity.com profile link";
+    previewError = "Enter a Steam ID / profile link or a FACEIT link / username";
     previewLoading = false;
     renderPreview();
     updateGeneratedUrl();
     return;
   }
 
+  // A plain Steam64 needs no lookup; every other form is a network round-trip.
   let steamId: string;
-  if (parsed.kind === "vanity") {
-    // Resolving a vanity URL is a network round-trip; show a loading state.
+  if (parsed.kind === "id") {
+    steamId = parsed.steamId;
+  } else {
     previewLoading = true;
     previewError = null;
     renderPreview();
     try {
-      steamId = await resolveVanityUrl(parsed.vanity);
+      steamId = await resolveAccountToSteamId(parsed);
     } catch (e) {
       if (token !== resolveToken) return; // superseded by newer input
       trackEvent("preview_error", { stage: "resolve", reason: classifyFetchError(e) });
@@ -253,13 +256,38 @@ async function resolveAndLoad(rawInput: string) {
       return;
     }
     if (token !== resolveToken) return; // superseded by newer input
-  } else {
-    steamId = parsed.steamId;
   }
 
   currentConfig.steamId = steamId;
   updateGeneratedUrl();
   await loadPreview(token);
+}
+
+// Resolves a non-Steam64 Account input to a Steam64 ID. A Steam vanity link
+// goes through the Steam proxy; a FACEIT link/nickname through the FACEIT
+// Worker. A bare word is ambiguous, so it tries the current provider's source
+// first (FACEIT in FACEIT mode, Steam otherwise) and falls back to the other.
+async function resolveAccountToSteamId(parsed: AccountInput): Promise<string> {
+  switch (parsed.kind) {
+    case "steamVanity":
+      return resolveVanityUrl(parsed.vanity);
+    case "faceit":
+      return resolveFaceitNickname(parsed.nickname);
+    case "ambiguous": {
+      const word = parsed.token;
+      const tryFaceit = () => resolveFaceitNickname(word);
+      const trySteam = () => resolveVanityUrl(word);
+      const [first, second] =
+        currentConfig.provider === "faceit" ? [tryFaceit, trySteam] : [trySteam, tryFaceit];
+      try {
+        return await first();
+      } catch {
+        return second();
+      }
+    }
+    default:
+      throw new Error("Enter a Steam ID / profile link or a FACEIT link / username");
+  }
 }
 
 async function loadPreview(token = ++resolveToken) {
@@ -1021,8 +1049,8 @@ function init() {
 
         <div class="setup-body">
           <section class="group group-steam">
-            <h2 class="group-label" id="identity-label">STEAM</h2>
-            <input type="text" id="steam-id" class="field-input" placeholder="Steam64 ID, profile link, or vanity name" autocomplete="off" spellcheck="false">
+            <h2 class="group-label" id="identity-label">ACCOUNT</h2>
+            <input type="text" id="steam-id" class="field-input" placeholder="Steam ID / profile link, or FACEIT link / username" autocomplete="off" spellcheck="false">
             <div class="seg-row provider-toggle" id="provider-toggle">
               <button type="button" class="seg" data-provider="leetify">PREMIER</button>
               <button type="button" class="seg" data-provider="faceit">FACEIT</button>

@@ -70,9 +70,16 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    // Nickname → Steam64 resolution, so the customizer's "Account" field can
+    // accept a FACEIT nickname / profile link: it returns the player's CS2
+    // `game_player_id` (their Steam ID), which both providers then key off.
+    const nickname = url.searchParams.get('nickname');
+    if (nickname !== null) return resolveNickname(nickname, env, cors);
+
     const steam64 = url.searchParams.get('steam64_id');
     if (steam64 === null) {
-      return json({ error: 'Missing steam64_id query parameter' }, 400, cors);
+      return json({ error: 'Missing steam64_id or nickname query parameter' }, 400, cors);
     }
 
     // Clamp the requested history length to a sane range.
@@ -84,6 +91,40 @@ export default {
     return resolveProfile(steam64, history, env, cors);
   },
 };
+
+// Resolves a FACEIT nickname to the player's Steam64 ID (their CS2
+// `game_player_id`). Used only to turn a FACEIT identity typed in the Account
+// field into the Steam ID the rest of the app keys off — the full profile is
+// then fetched by `?steam64_id=` like any other.
+async function resolveNickname(rawNickname, env, cors) {
+  const nickname = rawNickname.trim();
+  // FACEIT nicknames are letters/digits and a small set of punctuation.
+  if (!/^[A-Za-z0-9_.\-[\]|~]{1,64}$/.test(nickname)) {
+    return json({ error: 'Invalid FACEIT nickname' }, 400, cors);
+  }
+  if (!env.FACEIT_API_KEY) {
+    return json({ error: 'Worker is missing the FACEIT_API_KEY secret' }, 500, cors);
+  }
+  const auth = { headers: { Authorization: `Bearer ${env.FACEIT_API_KEY}` } };
+  try {
+    const res = await fetch(
+      `${FACEIT_BASE}/players?nickname=${encodeURIComponent(nickname)}&game=cs2`,
+      auth,
+    );
+    if (res.status === 404) {
+      return json({ error: 'No FACEIT player found for that nickname' }, 404, cors);
+    }
+    if (!res.ok) return json({ error: `FACEIT API error: ${res.status}` }, 502, cors);
+    const player = await res.json();
+    const steamId = String(player?.games?.cs2?.game_player_id ?? '');
+    if (!/^\d{17}$/.test(steamId)) {
+      return json({ error: 'That FACEIT player has no linked Steam CS2 account' }, 404, cors);
+    }
+    return json({ steamId }, 200, cors);
+  } catch {
+    return json({ error: 'Failed to reach the FACEIT API' }, 502, cors);
+  }
+}
 
 // Resolves a Steam64 ID to the full FACEIT overlay payload: player identity +
 // ELO + level, lifetime stats, recent matches (with per-match kills/deaths/ADR/
