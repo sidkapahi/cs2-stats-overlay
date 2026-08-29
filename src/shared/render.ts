@@ -139,10 +139,11 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
       kd: totalDeaths > 0 ? (totalKills / totalDeaths).toFixed(2) : '—',
       avg: withKd.length > 0 ? (totalKills / withKd.length).toFixed(1) : '—',
       aim: data.aimRating.toFixed(1),
-      winpct: `${Math.round((data.winRate ?? 0) * 100)}%`,
-      // FACEIT-only stats: lifetime ADR and headshot %, unset in Premier mode.
+      // Percentages drop the "%" from the value — the "WIN %" / "HS %" label
+      // below the number already carries it.
+      winpct: `${Math.round((data.winRate ?? 0) * 100)}`,
       adr: data.adr != null ? data.adr.toFixed(1) : '—',
-      hs: data.hsPct != null ? `${Math.round(data.hsPct * 100)}%` : '—',
+      hs: data.hsPct != null ? `${Math.round(data.hsPct * 100)}` : '—',
     };
     const cells = config.stats
       .map(
