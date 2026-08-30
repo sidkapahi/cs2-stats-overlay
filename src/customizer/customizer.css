@@ -632,7 +632,7 @@ select.field-input {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
   padding-top: 4px;
 }
 
@@ -935,7 +935,7 @@ select.field-input {
 .foot-legal {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 .foot-link {
   background: none;
