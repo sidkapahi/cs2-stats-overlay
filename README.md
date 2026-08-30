@@ -24,6 +24,14 @@ A free OBS / StreamElements overlay that shows your CS2 Premier rating, rank bad
 
 ## Overview
 
+> [!TIP]
+> **✨ New features**
+> - **FACEIT support** — point the overlay at your FACEIT stats (ELO, skill
+>   level, and more) alongside Premier
+> - **Live tracking for Kick & YouTube** — per-stream win/loss now works on Kick
+>   and YouTube, not just Twitch
+> - **More stat options** — added **HS%** and **ADR** to the stats you can show
+
 CS2 Stats Overlay puts a clean stats card on your stream that stays
 up to date on its own. You point it at your Steam profile, pick what to show, and
 drop the generated URL into OBS, Streamlabs, or StreamElements. Stats come live
