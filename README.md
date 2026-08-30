@@ -13,7 +13,7 @@ A free OBS / StreamElements overlay that shows your CS2 Premier rating, rank bad
 <br/>
 
 **[How-To Guide](#how-to-guide)** · **[Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)**
-[![license MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+</br>[![license MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![built with TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/sidkapahi/cs2-stats-overlay/pulls)
 
