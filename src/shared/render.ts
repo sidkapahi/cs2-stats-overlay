@@ -1,6 +1,8 @@
 import type { PremierData } from './api';
 import { brandLogoSrc } from './brandLogo';
 import { defaultAvatarSrc } from './defaultAvatar';
+import { challengerColor, faceitDialSvg } from './faceitRanks';
+import { flagUrl } from './flags';
 import { fontStack } from './fonts';
 import { formatRating, getRankTier } from './ranks';
 import { STAT_LABELS, type RankTier, type StatKey, type WidgetConfig } from './types';
@@ -49,33 +51,72 @@ function brandHtml(): string {
 // Builds the full widget markup for a config + data pair. Shared by the live
 // widget and the customizer preview so both stay pixel-identical.
 export function renderWidget(config: WidgetConfig, data: PremierData): string {
+  const isFaceit = config.provider === 'faceit';
+  // Challenger = a level-10 player who holds a leaderboard position (#528).
+  const isChallenger = isFaceit && data.leaderboardPosition != null;
   const tier = getRankTier(data.rating);
+  // Stats are averaged over the whole recent window; the history strip caps at 5
+  // when stats are hidden (see historyCount below).
   const recent = data.recentGames.slice(0, config.matchCount);
 
-  // Rating — either the rank badge or a plain rank-coloured number.
+  // Rating — provider-specific. Premier: the rank badge or a rank-coloured
+  // number. FACEIT: the ELO, tinted with the skill-level colour — the dial art
+  // already carries the level, so the number sits beside it, not on a badge.
   const ratingText = formatRating(data.rating);
-  const ratingHtml = config.showBadge
-    ? `<div class="rating-badge">${badgeSvg(tier)}<span class="rating-badge-text">${ratingText}</span></div>`
-    : `<span class="rating-plain">${ratingText}</span>`;
-
-  // Rank-point diff (e.g. +250). Hidden when disabled or not derivable.
-  let diffHtml = '';
-  if (config.showChange && data.ratingDiff !== 0) {
-    const cls = data.ratingDiff > 0 ? 'positive' : 'negative';
-    const prefix = data.ratingDiff > 0 ? '+' : '';
-    diffHtml = `<span class="rating-diff ${cls}">${prefix}${data.ratingDiff}</span>`;
+  let ratingHtml: string;
+  if (isFaceit) {
+    // ELO is white for every level/rank (the rank colour lives in the dial).
+    ratingHtml = `<span class="rating-plain faceit-elo">${ratingText}</span>`;
+  } else {
+    ratingHtml = config.showBadge
+      ? `<div class="rating-badge">${badgeSvg(tier)}<span class="rating-badge-text">${ratingText}</span></div>`
+      : `<span class="rating-plain">${ratingText}</span>`;
   }
 
-  // When the avatar is enabled, always fill the slot: use the player's real
-  // Steam avatar when it resolved, otherwise fall back to the default blue
-  // "smiley" mark so a missing/private avatar still shows a face rather than a
-  // gap.
-  const avatarSrc = data.avatarUrl ? esc(data.avatarUrl) : defaultAvatarSrc;
-  const avatarHtml = config.showAvatar
-    ? `<img class="avatar" src="${avatarSrc}" alt="">`
-    : '';
+  // Rating change (Premier: rank-point diff like +250; FACEIT: the session-scoped
+  // ELO swing shown with an arrow, e.g. ↘ 53). Hidden when disabled or zero.
+  let diffHtml = '';
+  if (config.showChange && data.ratingDiff !== 0) {
+    const up = data.ratingDiff > 0;
+    const cls = up ? 'positive' : 'negative';
+    if (isFaceit) {
+      diffHtml = `<span class="rating-diff ${cls}">${up ? '↗' : '↘'} ${Math.abs(data.ratingDiff)}</span>`;
+    } else {
+      diffHtml = `<span class="rating-diff ${cls}">${up ? '+' : ''}${data.ratingDiff}</span>`;
+    }
+  }
 
-  const nameHtml = config.showName ? `<div class="name">${esc(data.name)}</div>` : '';
+  // Left slot. Premier: the player's avatar (real Steam avatar, or the default
+  // blue "smiley" mark so a missing/private avatar still shows a face). FACEIT:
+  // the rank dial (the level 1–10 skill icon, or the Challenger emblem with its
+  // #528 position pill), gated by the badge toggle; FACEIT shows no separate
+  // avatar photo.
+  let avatarHtml = '';
+  if (isFaceit) {
+    // The dial is always shown in FACEIT (there's no badge toggle — it's the
+    // rank indicator). Challenger #1/#2/#3 recolour the emblem + pill.
+    const dial = faceitDialSvg(data.skillLevel, isChallenger, data.leaderboardPosition);
+    const posHtml =
+      isChallenger && data.leaderboardPosition != null
+        ? `<span class="faceit-pos" style="background: ${challengerColor(data.leaderboardPosition)}">#${data.leaderboardPosition}</span>`
+        : '';
+    avatarHtml = `<div class="faceit-rank">${dial}${posHtml}</div>`;
+  } else {
+    const avatarSrc = data.avatarUrl ? esc(data.avatarUrl) : defaultAvatarSrc;
+    avatarHtml = config.showAvatar ? `<img class="avatar" src="${avatarSrc}" alt="">` : '';
+  }
+
+  // Name, with a country flag before it in FACEIT mode — gated by the Flag
+  // toggle and present only when the API returned a country (flag-icons 4:3 set;
+  // radius applied in CSS).
+  let nameHtml = '';
+  if (config.showName) {
+    const flag =
+      isFaceit && config.showFlag && flagUrl(data.country)
+        ? `<img class="flag" src="${flagUrl(data.country)}" alt="">`
+        : '';
+    nameHtml = `<div class="name">${flag}${esc(data.name)}</div>`;
+  }
 
   // W/L pills — total wins and losses across the returned recent matches.
   let wlHtml = '';
@@ -98,7 +139,11 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
       kd: totalDeaths > 0 ? (totalKills / totalDeaths).toFixed(2) : '—',
       avg: withKd.length > 0 ? (totalKills / withKd.length).toFixed(1) : '—',
       aim: data.aimRating.toFixed(1),
-      winpct: `${Math.round((data.winRate ?? 0) * 100)}%`,
+      // Percentages drop the "%" from the value — the "WIN %" / "HS %" label
+      // below the number already carries it.
+      winpct: `${Math.round((data.winRate ?? 0) * 100)}`,
+      adr: data.adr != null ? data.adr.toFixed(1) : '—',
+      hs: data.hsPct != null ? `${Math.round(data.hsPct * 100)}` : '—',
     };
     const cells = config.stats
       .map(
@@ -109,11 +154,16 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
     statsHtml = `<div class="stats">${cells}</div>`;
   }
 
-  // Match-history strip: W/L/T letters (oldest → newest) plus the wordmark.
+  // Match-history strip: W/L/T letters most-recent → oldest, left to right.
+  // recentGames is newest-first (both providers), so no reversal. When stats are
+  // hidden the row has more room, so the strip is capped at 5 and the top row
+  // spreads (rank ⇄ W/L); with stats on it shows up to matchCount.
+  const noStatsWithHistory = !config.showStats && config.showMatchHistory;
+  const historyCount = noStatsWithHistory ? Math.min(5, config.matchCount) : config.matchCount;
   let historyHtml = '';
   if (config.showMatchHistory) {
-    const letters = [...recent]
-      .reverse()
+    const letters = data.recentGames
+      .slice(0, historyCount)
       .map((g) => {
         const cls = g.outcome === 'win' ? 'w' : g.outcome === 'tie' ? 't' : 'l';
         const lbl = g.outcome === 'win' ? 'W' : g.outcome === 'tie' ? 'T' : 'L';
@@ -128,10 +178,17 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
   }
 
   const modifiers = [
-    `rank-${tier.key}`,
+    // Provider drives the rating colour: Premier by rank tier, FACEIT by level.
+    isFaceit ? 'provider-faceit' : `rank-${tier.key}`,
     config.showBadge ? 'has-badge' : 'no-badge',
-    config.showAvatar ? 'has-avatar' : 'no-avatar',
-  ].join(' ');
+    // has-avatar controls left-slot spacing; in FACEIT the slot is always the dial.
+    (isFaceit || config.showAvatar) ? 'has-avatar' : 'no-avatar',
+    isChallenger ? 'is-challenger' : '',
+    // Spread the top row (rank ⇄ W/L) when stats are hidden but history is shown.
+    noStatsWithHistory ? 'layout-spread' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   // Design overrides: configurable background tint/opacity, font family, and
   // weight. `--w-weight` drives the body/name text; `--w-weight-strong` is one

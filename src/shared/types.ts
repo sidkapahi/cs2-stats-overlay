@@ -90,23 +90,49 @@ export interface RankTier {
 
 // The individual stats the widget can show. `showStats` gates the whole block;
 // `stats` picks which of these appear (in this order), capped at STAT_MAX.
-export type StatKey = 'kd' | 'avg' | 'aim' | 'winpct';
+// `aim` is Premier-only (Leetify's aim rating); `adr`/`hs` are FACEIT-only —
+// which keys are offered depends on the provider (see PROVIDER_STATS).
+export type StatKey = 'kd' | 'avg' | 'aim' | 'winpct' | 'adr' | 'hs';
 
-export const STAT_KEYS: StatKey[] = ['kd', 'avg', 'aim', 'winpct'];
+export const STAT_KEYS: StatKey[] = ['kd', 'avg', 'aim', 'winpct', 'adr', 'hs'];
 export const STAT_LABELS: Record<StatKey, string> = {
   kd: 'K/D',
   avg: 'AVG',
   aim: 'AIM',
   winpct: 'WIN %',
+  adr: 'ADR',
+  hs: 'HS %',
 };
 // The widget only has room for three stat columns, so the picker is capped here.
 export const STAT_MAX = 3;
+
+// Which data source backs the overlay. Premier reads Leetify (Steam ID);
+// FACEIT reads the FACEIT Data API via its proxy Worker (FACEIT nickname).
+export type Provider = 'leetify' | 'faceit';
+
+// The stat keys each provider can offer, in the customizer's display order.
+// FACEIT has no aim rating; Premier (Leetify) has no ADR/HS.
+export const PROVIDER_STATS: Record<Provider, StatKey[]> = {
+  leetify: ['kd', 'avg', 'aim', 'winpct', 'hs'],
+  faceit: ['kd', 'avg', 'adr', 'winpct', 'hs'],
+};
+
+// The default stat trio per provider. Premier keeps its original K/D·AVG·AIM;
+// FACEIT swaps the (unavailable) aim slot for ADR.
+export const DEFAULT_STATS_BY_PROVIDER: Record<Provider, StatKey[]> = {
+  leetify: ['kd', 'avg', 'aim'],
+  faceit: ['kd', 'avg', 'adr'],
+};
 
 // Streaming platforms whose live status can drive session-scoped W/L. Each has
 // its own proxy Worker (see worker/), picked from the link the user pastes.
 export type LivePlatform = 'twitch' | 'youtube' | 'kick';
 
 export interface WidgetConfig {
+  // Data source. Both providers are keyed by the same Steam ID — 'leetify'
+  // (Premier, the default) reads Leetify; 'faceit' reads the FACEIT provider
+  // (the Worker resolves the Steam ID to the FACEIT player).
+  provider: Provider;
   steamId: string;
   // Live-session source. When a platform + channel are set, the W/L pills become
   // session-scoped: they reset when the channel goes live and freeze (keeping the
@@ -117,6 +143,9 @@ export interface WidgetConfig {
   livePlatform: '' | LivePlatform;
   liveChannel: string;
   showAvatar: boolean;
+  // FACEIT only: show the country flag before the name (replaces the Avatar
+  // toggle, which FACEIT mode doesn't use — the dial fills the left slot).
+  showFlag: boolean;
   showName: boolean;
   showBadge: boolean;
   showChange: boolean;
@@ -137,10 +166,12 @@ export interface WidgetConfig {
 }
 
 export const DEFAULT_CONFIG: WidgetConfig = {
+  provider: 'leetify',
   steamId: '',
   livePlatform: '',
   liveChannel: '',
   showAvatar: true,
+  showFlag: true,
   showName: true,
   showBadge: true,
   showChange: false,

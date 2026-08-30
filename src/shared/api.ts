@@ -35,6 +35,18 @@ export interface PremierData {
   losses: number;
   recentGames: LeetifyGame[];
   aimRating: number;
+  // FACEIT-only fields, unset in Premier (Leetify) mode. `render.ts` reads them
+  // only when the widget's provider is 'faceit'.
+  //
+  // Lowercase ISO 3166-1 alpha-2 country code (drives the flag), e.g. 'ca'.
+  country?: string;
+  // FACEIT skill level 1–10; 10 is Challenger. Drives the rank dial.
+  skillLevel?: number;
+  // Challenger leaderboard position (the `#528` pill); only set for level 10.
+  leaderboardPosition?: number;
+  // Lifetime FACEIT stats for the ADR / HS% stat cells (0..1 for `hsPct`).
+  adr?: number;
+  hsPct?: number;
 }
 
 // Maps a fetch/resolve failure to a coarse, non-PII reason code for analytics,
@@ -100,10 +112,31 @@ export async function fetchPremierData(steamId: string): Promise<PremierData> {
     .map((g) => g.rank as number);
   const ratingDiff = premierRanks.length >= 2 ? premierRanks[0] - premierRanks[1] : 0;
 
-  // Win / loss tallies across the returned recent matches (ties are shown in the
-  // history strip but don't count toward the W/L pills).
-  const wins = recentGames.filter((g) => g.outcome === 'win').length;
-  const losses = recentGames.filter((g) => g.outcome === 'loss').length;
+  // Win / loss tallies for the TOTAL pills — counted over the Premier matches in
+  // the recent window (Leetify returns up to ~100), the closest the API allows
+  // to a season total. recent_matches mixes modes, so filter to Premier the same
+  // way the rating-diff does (a CS Rating in the thousands, FACEIT excluded);
+  // ties don't count. (Live-session mode overrides these with the stream record.)
+  const premierGames = recentGames.filter(
+    (g) =>
+      typeof g.rank === 'number' &&
+      g.rank >= PREMIER_MIN_RANK &&
+      !/faceit/i.test(g.data_source ?? ''),
+  );
+  const wins = premierGames.filter((g) => g.outcome === 'win').length;
+  const losses = premierGames.filter((g) => g.outcome === 'loss').length;
+
+  // Headshot % — Leetify's `accuracy_head` (the share of a player's hits that
+  // were headshots, i.e. Leetify's "Headshot Accuracy"), averaged over the
+  // recent matches. The API returns it on a 0..100 scale (verified against a
+  // live profile), so divide by 100 to the 0..1 fraction render.ts expects — the
+  // same convention as the FACEIT HS% cell.
+  const headVals = recentGames
+    .map((g) => g.accuracy_head)
+    .filter((v): v is number => typeof v === 'number' && v > 0);
+  const hsPct = headVals.length
+    ? headVals.reduce((s, v) => s + v, 0) / headVals.length / 100
+    : undefined;
 
   return {
     name: data.name,
@@ -115,6 +148,7 @@ export async function fetchPremierData(steamId: string): Promise<PremierData> {
     losses,
     recentGames,
     aimRating: data.rating.aim,
+    hsPct,
   };
 }
 

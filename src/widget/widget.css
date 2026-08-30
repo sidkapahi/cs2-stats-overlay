@@ -225,5 +225,77 @@ body {
   width: auto;
 }
 
+/* ---- FACEIT mode -------------------------------------------------------- */
+/* Rank dial (the level 1–10 skill icon or the Challenger emblem) — occupies the
+   left slot where Premier shows the avatar. The level number and colour are
+   baked into the SVG art. */
+.faceit-rank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.faceit-rank svg {
+  display: block;
+  width: 80px;
+  height: 80px;
+}
+
+/* Challenger leaderboard position (#528) — a rounded red pill that overlaps the
+   bottom of the emblem, dark text (Figma 64:830 / 64:834: bg #e80128, text
+   #121212, px-16/py-12 scaled to the 80px dial). Only rendered for Challenger. */
+.faceit-pos {
+  position: relative;
+  z-index: 1;
+  margin-top: -16px; /* overlap up into the emblem, like the design's mb-[-26px] */
+  /* Sides ~1.3x the top/bottom, matching the Figma's 12/16 padding ratio. */
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: #e80128;
+  color: #121212;
+  font-size: 14px;
+  /* Extra-bold (900), heavier than the rest of the widget, so the position pill
+     pops. Hardcoded (not the config-driven weight) so it stays extra-bold even
+     if the widget's font weight is set lighter. */
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Country flag before the player name (flag-icons 4:3). Corner radius is set
+   here, not baked into the art. */
+.name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flag {
+  height: 22px;
+  width: auto;
+  border-radius: 4px;
+  flex-shrink: 0;
+  /* A hairline keeps a white/light flag legible on the dark widget. */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+/* FACEIT ELO is white for every level/rank (the rank colour is carried by the
+   dial, not the number); tabular figures keep it steady as the number changes. */
+.faceit-elo {
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* No-stats + match-history layout (Figma 64:776): the top row keeps a natural
+   gap between the rank and the W/L pills rather than being forced to opposite
+   ends. The match-history strip below still spreads (its own justify-between),
+   so the widget sizes to the top row's width. */
+.widget.layout-spread .widget-main {
+  gap: 40px;
+}
+
 /* ---- Loading ------------------------------------------------------------ */
 .widget.loading { opacity: 0.6; }

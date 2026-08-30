@@ -77,10 +77,18 @@ You'll need your CS2 stats flowing into Leetify:
 
 1. Open the **[customizer](https://cs2widget.kapkit.ca/)**
 2. Paste your **Steam profile link** or Steam64 ID (can be found on [SteamID I/O](https://steamid.io/))
-3. Toggle what to show — avatar, name, rank badge, rank change, stats, match history
-4. Set how many recent matches to show and how often it refreshes
-5. *(Optional)* For a per-stream win/loss, switch the Win/Loss source to **Live Session** and add a profile link (Twitch, YouTube, or Kick)
-6. Copy the generated **widget URL** (or download the StreamElements bundle — see below)
+3. Pick your source with the **PREMIER / FACEIT** toggle — same Steam profile either way:
+   - **Premier** — CS Rating, rank badge, K/D, AIM, win %
+   - **FACEIT** — FACEIT ELO, skill level, K/D, ADR, HS%, win rate, and (for Challenger players) your leaderboard position
+4. Toggle what to show — avatar/flag, name, rank badge/dial, rank/ELO change, stats, match history
+5. Set how many recent matches to show and how often it refreshes
+6. *(Optional)* For a per-stream win/loss, switch the Win/Loss source to **Live Session** and add a profile link (Twitch, YouTube, or Kick)
+7. Copy the generated **widget URL** (or download the StreamElements bundle — see below)
+
+> [!NOTE]
+> **FACEIT mode** needs the FACEIT proxy Worker deployed (a free FACEIT Data API
+> key on Cloudflare). See [worker/README.md](worker/README.md#faceit-proxy-cloudflare-worker).
+> Premier mode needs no setup.
 
 ### Add it to OBS/Streamlabs OBS
 
