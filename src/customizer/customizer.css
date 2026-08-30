@@ -935,7 +935,7 @@ select.field-input {
 .foot-legal {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 .foot-link {
   background: none;
