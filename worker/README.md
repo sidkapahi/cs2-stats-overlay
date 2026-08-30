@@ -241,7 +241,7 @@ for Premier and FACEIT:
 GET /?steam64_id=76561198034202275&history=10
 → 200 {
     "nickname": "s1mple", "playerId": "…", "country": "ua",
-    "avatarUrl": "https://…", "elo": 3200, "level": 10, "region": "EU",
+    "avatarUrl": "https://…", "elo": 3200, "eloDiff": 140, "level": 10, "region": "EU",
     "winRate": 0.61, "kd": 1.34, "adr": 92.1, "hs": 0.53,
     "position": 528,                       // Challenger rank, else null
     "matches": [
@@ -253,7 +253,11 @@ GET /?steam64_id=76561198034202275&history=10
 
 `history` is optional (default 10, capped at 20). Lifetime fields the API
 doesn't expose come back `null`; a per-match stat that can't be fetched leaves
-that match's `kills`/`deaths` `null` but keeps its `outcome`. A Steam account
+that match's `kills`/`deaths` `null` but keeps its `outcome`. `eloDiff` is the
+net ELO change across the recent `history` window (the sum of the per-match ELO
+changes — the widget's TOTAL-mode loss/gain) — the Data API has no per-match ELO,
+so it's derived best-effort from FACEIT's public web stats API and comes back `0`
+when that can't be reached. A Steam account
 with no FACEIT CS2 profile returns `404`, an invalid `steam64_id` `400`, and a
 missing `FACEIT_API_KEY` `500`. Successful responses are cached ~30s; errors are
 never cached.
