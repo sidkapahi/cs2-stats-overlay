@@ -126,15 +126,17 @@ body {
 .rating-diff {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.1em; /* 4px at the design's 40px number (Figma 70:1419 / 70:1413) */
   font-size: 24px;
   font-weight: var(--w-weight-strong, 800);
   line-height: 1;
   white-space: nowrap;
 }
+/* 48px icon box over a 40px number in the design → 1.2em. The arrow's own
+   padding (viewBox 0 0 48 48) sits it inset and adds the gap to the number. */
 .diff-arrow {
-  width: 1em;
-  height: 1em;
+  width: 1.2em;
+  height: 1.2em;
   flex-shrink: 0;
 }
 .rating-diff.positive { color: #5dad60; }
