@@ -632,7 +632,7 @@ select.field-input {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
   padding-top: 4px;
 }
 
