@@ -36,6 +36,10 @@ jobs:
           VITE_TWITCH_PROXY_URL: ${{ vars.VITE_TWITCH_PROXY_URL || secrets.VITE_TWITCH_PROXY_URL }}
           VITE_YOUTUBE_PROXY_URL: ${{ vars.VITE_YOUTUBE_PROXY_URL || secrets.VITE_YOUTUBE_PROXY_URL }}
           VITE_KICK_PROXY_URL: ${{ vars.VITE_KICK_PROXY_URL || secrets.VITE_KICK_PROXY_URL }}
+          # Public URL of the FACEIT proxy Worker (worker/faceit-proxy.js) —
+          # required for FACEIT mode. Not a secret, so a repository variable is
+          # the natural home, but a secret with the same name works too.
+          VITE_FACEIT_PROXY_URL: ${{ vars.VITE_FACEIT_PROXY_URL || secrets.VITE_FACEIT_PROXY_URL }}
           # PostHog analytics — the project key is a public, write-only
           # identifier, so a repository variable is the natural home (a secret
           # works too). VITE_POSTHOG_HOST selects the US/EU region.
