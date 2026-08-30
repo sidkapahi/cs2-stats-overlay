@@ -45,13 +45,6 @@ run, no account to make on this site.
 Everything is toggleable, so you can run a minimal rating-only badge or the full
 stats card — your call.
 
-> [!NOTE]
-> **Built with [Claude Code](https://claude.com/claude-code) from a [Figma](https://www.figma.com) design, with security in mind.**
-> There's **no login, no accounts, and nothing personal to hand over** — it's a
-> static site that only reads your **public** CS2 stats. It's actively used on
-> live streams, and I'd love help making it even better — **developers and
-> contributors, [PRs are very welcome](https://github.com/sidkapahi/cs2-stats-overlay/pulls)!**
-
 ## How-To Guide
 
 You don't need to install anything to use the overlay. The hosted customizer
@@ -157,6 +150,13 @@ Running locally, self-hosting, the optional Cloudflare Workers, analytics setup,
 environment variables, and contributing are all in
 **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**. The full analytics event
 reference is in **[docs/ANALYTICS.md](docs/ANALYTICS.md)**.
+
+> [!NOTE]
+> **Built with [Claude Code](https://claude.com/claude-code) from a [Figma](https://www.figma.com) design, with security in mind.**
+> There's **no login, no accounts, and nothing personal to hand over** — it's a
+> static site that only reads your **public** CS2 stats. It's actively used on
+> live streams, and I'd love help making it even better — **developers and
+> contributors, [PRs are very welcome](https://github.com/sidkapahi/cs2-stats-overlay/pulls)!**
 
 ## License
 
