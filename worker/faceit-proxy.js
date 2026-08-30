@@ -40,10 +40,11 @@ const ALLOWED_ORIGINS = new Set([
 const FACEIT_BASE = 'https://open.faceit.com/data/v4';
 
 // FACEIT's public web stats API (no key required). The Data API above exposes no
-// per-match ELO, so the "last match" ELO swing — the loss/gain the widget shows
-// in TOTAL mode, mirroring Premier's rank-point diff — is derived from here.
-// It's an undocumented endpoint, so every use is best-effort: any failure yields
-// a 0 diff and the widget simply hides the pill, exactly as before this existed.
+// per-match ELO, but this endpoint returns each match with the ELO the player
+// held *after* it — so the net ELO across the recent window (the loss/gain the
+// widget shows in TOTAL mode) is the sum of those per-match changes. It's an
+// undocumented endpoint, so every use is best-effort: any failure yields a 0 diff
+// and the widget simply hides the pill, exactly as before this existed.
 const FACEIT_WEB_STATS = 'https://www.faceit.com/api/stats/v1/stats/time/users';
 
 // How many recent matches to pull per-match stats for. The history strip shows
@@ -184,13 +185,14 @@ async function resolveProfile(rawSteam64, history, env, cors) {
     return json({ error: 'That FACEIT player has no CS2 data' }, 404, cors);
   }
 
-  // 2-5. Lifetime stats, recent history, the last-match ELO swing, and (only for
-  // Challenger) leaderboard position run in parallel — none depends on the others
-  // once we have the id.
+  // 2-5. Lifetime stats, recent history, the recent-window ELO change, and (only
+  // for Challenger) leaderboard position run in parallel — none depends on the
+  // others once we have the id. The ELO change is summed over the same `history`
+  // window the widget shows its recent matches for.
   const [stats, recent, eloDiff, position] = await Promise.all([
     fetchLifetime(playerId, auth),
     fetchRecentMatches(playerId, history, auth),
-    fetchLastEloDiff(playerId),
+    fetchRecentEloDiff(playerId, history),
     level === 10 && region ? fetchPosition(playerId, region, auth) : Promise.resolve(null),
   ]);
 
@@ -203,9 +205,10 @@ async function resolveProfile(rawSteam64, history, env, cors) {
       elo: num(cs2.faceit_elo),
       level,
       region: typeof region === 'string' ? region : null,
-      // Last-match ELO swing (e.g. +25 / -18), 0 when it can't be derived. The
-      // widget shows this as the TOTAL-mode loss/gain; live-session mode replaces
-      // it client-side with the ELO gained/lost across the stream.
+      // Net ELO change across the recent window (sum of the per-match changes,
+      // e.g. +140), 0 when it can't be derived. The widget shows this as the
+      // TOTAL-mode loss/gain; live-session mode replaces it client-side with the
+      // ELO gained/lost across the stream.
       eloDiff,
       // Lifetime aggregates (nulls when FACEIT doesn't expose the field).
       winRate: stats.winRate,
@@ -314,31 +317,41 @@ async function fetchRecentMatches(playerId, statsCount, auth) {
   return { matches, wins, losses };
 }
 
-// Last-match ELO swing from FACEIT's public web stats API. Each entry carries
-// the ELO the player *held after* that match (a cumulative value like 2450), so
-// the newest two give the last game's change. Sorted newest-first by timestamp
-// to be robust to ordering. Best-effort: any failure (endpoint down, shape
-// change, fewer than two matches) returns 0, so the caller falls back to hiding
-// the loss/gain pill rather than surfacing an error.
-async function fetchLastEloDiff(playerId) {
+// Net ELO change across the last `window` matches, from FACEIT's public web
+// stats API. Each entry carries the ELO the player *held after* that match (a
+// cumulative value like 2450), so the sum of the per-match changes over the
+// window telescopes to `newest − (window-back)` — i.e. two cumulative values.
+// Entries are sorted newest-first by timestamp to be robust to ordering; one
+// extra match is pulled so the oldest in-window match still has a prior value to
+// diff against. Best-effort: any failure (endpoint down, shape change, too few
+// matches) returns 0, so the caller falls back to hiding the loss/gain pill
+// rather than surfacing an error.
+async function fetchRecentEloDiff(playerId, window) {
+  const want = Math.max(1, Math.min(WL_WINDOW, Math.trunc(window) || 1));
+  // +1: summing N per-match changes needs the cumulative ELO from N+1 matches.
+  const size = Math.min(WL_WINDOW, want + 1);
   try {
     const res = await fetch(
-      `${FACEIT_WEB_STATS}/${encodeURIComponent(playerId)}/games/cs2?page=0&size=5`,
+      `${FACEIT_WEB_STATS}/${encodeURIComponent(playerId)}/games/cs2?page=0&size=${size}`,
       { headers: { Accept: 'application/json' }, cf: { cacheTtl: 30, cacheEverything: true } },
     );
     if (!res.ok) return 0;
     const data = await res.json();
     const items = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
-    const withElo = items
+    const elos = items
       .map((m) => ({
         elo: num(m?.elo),
         // `date` (ms) on the time-stats payload; `created_at` on older shapes.
         t: num(m?.date) ?? num(m?.created_at) ?? 0,
       }))
       .filter((m) => m.elo != null)
-      .sort((a, b) => b.t - a.t);
-    if (withElo.length < 2) return 0;
-    return Math.round(withElo[0].elo - withElo[1].elo);
+      .sort((a, b) => b.t - a.t)
+      .map((m) => m.elo);
+    if (elos.length < 2) return 0;
+    // Sum of the newest `n` per-match changes = elos[0] − elos[n]. Clamp `n` to
+    // what we actually got so a short history still yields a partial-window sum.
+    const n = Math.min(want, elos.length - 1);
+    return Math.round(elos[0] - elos[n]);
   } catch {
     return 0;
   }

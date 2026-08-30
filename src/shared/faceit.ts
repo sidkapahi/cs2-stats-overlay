@@ -16,7 +16,8 @@ interface FaceitProfile {
   country: string | null;
   avatarUrl: string;
   elo: number | null;
-  // Last-match ELO swing (e.g. +25 / -18); 0 when the Worker couldn't derive it.
+  // Net ELO change across the recent window (sum of per-match changes, e.g.
+  // +140); 0 when the Worker couldn't derive it.
   eloDiff: number | null;
   level: number | null;
   region: string | null;
@@ -129,10 +130,11 @@ export async function fetchFaceitData(steamId: string, history?: number): Promis
     name: p.nickname ?? '',
     avatarUrl: p.avatarUrl ?? '',
     rating: p.elo ?? 0,
-    // TOTAL-mode loss/gain: the last match's ELO swing, derived by the Worker
-    // from FACEIT's web stats API (the Data API has no per-match ELO). 0 when it
-    // couldn't be derived, which hides the pill. Live-session mode overrides this
-    // client-side with the ELO gained/lost across the stream (see widget.ts).
+    // TOTAL-mode loss/gain: the net ELO across the recent window (the sum of the
+    // per-match ELO changes), derived by the Worker from FACEIT's web stats API
+    // (the Data API has no per-match ELO). 0 when it couldn't be derived, which
+    // hides the pill. Live-session mode overrides this client-side with the ELO
+    // gained/lost across the stream (see widget.ts).
     ratingDiff: p.eloDiff ?? 0,
     winRate: p.winRate ?? 0,
     wins,
