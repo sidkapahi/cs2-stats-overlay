@@ -138,6 +138,18 @@ body {
   color: var(--text-dim);
 }
 
+/* "Leetify" credit — rendered in Leetify's brand colour and linked to their
+   site (see the subtitle in setup-head). */
+.leetify-link {
+  color: #f84982;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.15s ease;
+}
+.leetify-link:hover {
+  opacity: 0.85;
+}
+
 /* Header button row: repo chip (auto) + Ko-fi / Twitch (equal, flexible) */
 .link-row {
   display: flex;
@@ -628,14 +640,6 @@ select.field-input {
   height: 30px;
   width: auto;
   display: block;
-}
-
-.foot-tag {
-  font-family: var(--font-ui);
-  font-weight: 500;
-  font-size: 15px;
-  letter-spacing: -0.02em;
-  color: var(--text);
 }
 
 /* ---- Stage: preview + export bar (responsive) --------------------------- */
