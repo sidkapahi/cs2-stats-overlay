@@ -43,6 +43,10 @@ const FACEIT_BASE = 'https://open.faceit.com/data/v4';
 // up to matchCount (default 10) and K/D is averaged over the same window, so 20
 // is a safe cap. Each match is one extra FACEIT request, done in parallel.
 const HISTORY_MAX = 20;
+// How many recent matches to tally for the TOTAL win/loss record. Outcomes come
+// straight from the history list (no per-match calls), so this is one cheap
+// request regardless of size — the widget's "TOTAL" pills show the season here.
+const WL_WINDOW = 100;
 const HISTORY_DEFAULT = 10;
 
 // Builds the CORS headers for a request. When the caller's Origin is on the
@@ -175,7 +179,7 @@ async function resolveProfile(rawSteam64, history, env, cors) {
 
   // 2-4. Lifetime stats, recent history, and (only for Challenger) leaderboard
   // position run in parallel — none depends on the others once we have the id.
-  const [stats, matches, position] = await Promise.all([
+  const [stats, recent, position] = await Promise.all([
     fetchLifetime(playerId, auth),
     fetchRecentMatches(playerId, history, auth),
     level === 10 && region ? fetchPosition(playerId, region, auth) : Promise.resolve(null),
@@ -195,9 +199,12 @@ async function resolveProfile(rawSteam64, history, env, cors) {
       kd: stats.kd,
       adr: stats.adr,
       hs: stats.hs,
+      // TOTAL win/loss over the last ~100 matches (the season-ish record).
+      wins: recent.wins,
+      losses: recent.losses,
       // Challenger leaderboard position (the `#528` pill), else null.
       position,
-      matches,
+      matches: recent.matches,
     },
     200,
     cors,
@@ -227,27 +234,40 @@ async function fetchLifetime(playerId, auth) {
   }
 }
 
-// Recent matches with the player's per-match kills/deaths/ADR/HS. The history
-// list has no per-match stats, so each match needs its own /matches/{id}/stats
-// call — fired in parallel. A finished match's stats never change, so they're
-// cached hard at the edge; a match whose stats can't be fetched still appears
-// (with its win/loss outcome) but without kills/deaths.
-async function fetchRecentMatches(playerId, limit, auth) {
+// Recent matches for the player. Pulls the history list once (up to WL_WINDOW)
+// to tally the TOTAL win/loss record from match outcomes — no per-match calls —
+// then fetches per-match stats (kills/deaths/ADR/HS) only for the first
+// `statsCount` matches, which is the window the widget shows in its stats cells
+// and history strip. A finished match's stats never change, so they're cached
+// hard at the edge; a match whose stats can't be fetched still appears (with its
+// outcome) but without kills/deaths. Returns { matches, wins, losses }.
+async function fetchRecentMatches(playerId, statsCount, auth) {
   let items;
   try {
     const res = await fetch(
-      `${FACEIT_BASE}/players/${playerId}/history?game=cs2&offset=0&limit=${limit}`,
+      `${FACEIT_BASE}/players/${playerId}/history?game=cs2&offset=0&limit=${WL_WINDOW}`,
       auth,
     );
-    if (!res.ok) return [];
+    if (!res.ok) return { matches: [], wins: 0, losses: 0 };
     const data = await res.json();
     items = Array.isArray(data?.items) ? data.items : [];
   } catch {
-    return [];
+    return { matches: [], wins: 0, losses: 0 };
   }
 
-  return Promise.all(
-    items.map(async (item) => {
+  // TOTAL win/loss over the whole window — outcomes are in the list already.
+  let wins = 0;
+  let losses = 0;
+  for (const item of items) {
+    const o = outcomeFor(item, playerId);
+    if (o === 'win') wins++;
+    else if (o === 'loss') losses++;
+  }
+
+  // Per-match stats only for the shown window (stats cells + history strip).
+  const shown = items.slice(0, Math.max(1, statsCount));
+  const matches = await Promise.all(
+    shown.map(async (item) => {
       const matchId = item?.match_id ?? null;
       const outcome = outcomeFor(item, playerId);
       const base = { matchId, outcome, kills: null, deaths: null, adr: null, hs: null };
@@ -277,6 +297,8 @@ async function fetchRecentMatches(playerId, limit, auth) {
       }
     }),
   );
+
+  return { matches, wins, losses };
 }
 
 // Determines win/loss/tie for a player from a history item. The item carries

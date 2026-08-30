@@ -112,10 +112,19 @@ export async function fetchPremierData(steamId: string): Promise<PremierData> {
     .map((g) => g.rank as number);
   const ratingDiff = premierRanks.length >= 2 ? premierRanks[0] - premierRanks[1] : 0;
 
-  // Win / loss tallies across the returned recent matches (ties are shown in the
-  // history strip but don't count toward the W/L pills).
-  const wins = recentGames.filter((g) => g.outcome === 'win').length;
-  const losses = recentGames.filter((g) => g.outcome === 'loss').length;
+  // Win / loss tallies for the TOTAL pills — counted over the Premier matches in
+  // the recent window (Leetify returns up to ~100), the closest the API allows
+  // to a season total. recent_matches mixes modes, so filter to Premier the same
+  // way the rating-diff does (a CS Rating in the thousands, FACEIT excluded);
+  // ties don't count. (Live-session mode overrides these with the stream record.)
+  const premierGames = recentGames.filter(
+    (g) =>
+      typeof g.rank === 'number' &&
+      g.rank >= PREMIER_MIN_RANK &&
+      !/faceit/i.test(g.data_source ?? ''),
+  );
+  const wins = premierGames.filter((g) => g.outcome === 'win').length;
+  const losses = premierGames.filter((g) => g.outcome === 'loss').length;
 
   // Headshot % — Leetify's `accuracy_head` (the share of a player's hits that
   // were headshots, i.e. Leetify's "Headshot Accuracy"), averaged over the

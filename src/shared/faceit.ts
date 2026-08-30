@@ -22,6 +22,8 @@ interface FaceitProfile {
   kd: number | null;
   adr: number | null;
   hs: number | null; // 0..1
+  wins: number | null; // TOTAL win/loss over the last ~100 matches
+  losses: number | null;
   position: number | null;
   matches: FaceitMatch[];
 }
@@ -116,8 +118,10 @@ export async function fetchFaceitData(steamId: string, history?: number): Promis
   const p = (await res.json()) as FaceitProfile;
 
   const recentGames = (Array.isArray(p.matches) ? p.matches : []).map(toGame);
-  const wins = recentGames.filter((g) => g.outcome === 'win').length;
-  const losses = recentGames.filter((g) => g.outcome === 'loss').length;
+  // TOTAL W/L comes from the Worker (tallied over the last ~100 matches); fall
+  // back to counting the returned window if the Worker didn't provide it.
+  const wins = p.wins ?? recentGames.filter((g) => g.outcome === 'win').length;
+  const losses = p.losses ?? recentGames.filter((g) => g.outcome === 'loss').length;
 
   return {
     name: p.nickname ?? '',
