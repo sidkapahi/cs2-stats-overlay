@@ -19,11 +19,12 @@ function esc(s: string): string {
 // Directional arrows for the rating change (rank loss/gain). Recreated inline
 // from the Figma "ArrowUpRight" / "ArrowDownRight" icons so the exported widget
 // stays self-contained (no external asset). `currentColor` inherits the diff's
-// positive/negative tint; the viewBox is cropped to the arrow's stroke bounds so
-// it sits tight against the number. To swap in a custom mark, replace the paths
-// here — this is the only place the arrows are defined.
-const DIFF_ARROW_UP = `<svg class="diff-arrow" viewBox="8 8 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 36L36 12" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 12H36V31.5" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const DIFF_ARROW_DOWN = `<svg class="diff-arrow" viewBox="8 8 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 12L36 36" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 36H36V16.5" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+// positive/negative tint. The viewBox is the full 48×48 design frame, so the
+// arrow keeps the padding that sits it inset in its box (icon ≈ 1.2× the number,
+// per .diff-arrow) and carries its built-in gap to the number — matching Figma
+// 70:1419 / 70:1413. To swap in a custom mark, replace the paths here.
+const DIFF_ARROW_UP = `<svg class="diff-arrow" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 36L36 12" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 12H36V31.5" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const DIFF_ARROW_DOWN = `<svg class="diff-arrow" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 12L36 36" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 36H36V16.5" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 // The Premier rank emblem shown behind the rating when the badge is enabled — a
 // right-leaning parallelogram with the tier's deep fill and two bright "//"

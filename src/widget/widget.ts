@@ -89,9 +89,12 @@ async function init() {
       if (wl.mode === 'session') {
         data = { ...lastData, wins: wl.wins, losses: wl.losses };
       }
-      // FACEIT has no per-match ELO delta from its API, so the change pill shows
-      // the ELO gained/lost this stream: current − the go-live snapshot.
-      if (config.provider === 'faceit' && sessionState.startRating != null) {
+      // Live-session mode scopes the loss/gain to the stream too, so it tracks the
+      // W/L toggle: the change pill shows the rating gained/lost this stream —
+      // current − the go-live snapshot — for both providers. (In total mode
+      // there's no snapshot, so the pill keeps the API's rolling-window diff:
+      // FACEIT's session swing / Premier's last-match swing.)
+      if (sessionState.startRating != null && lastData.rating != null) {
         data = { ...data, ratingDiff: lastData.rating - sessionState.startRating };
       }
     }
