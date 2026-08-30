@@ -14,7 +14,7 @@ A free OBS / StreamElements overlay that shows your CS2 Premier rating, rank bad
 
 <a href="https://cs2widget.kapkit.ca/?utm_source=github&utm_medium=README+Button"><img src="assets/create-overlay-button.svg" alt="Use Overlay" height="54"></a>
 
-<br/><br/>
+<br/>
 
 **[How-To Guide](#how-to-guide)** · **[Report a Bug](https://github.com/sidkapahi/cs2-stats-overlay/issues)**
 
