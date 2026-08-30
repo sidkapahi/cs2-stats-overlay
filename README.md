@@ -30,6 +30,14 @@ drop the generated URL into OBS, Streamlabs, or StreamElements. Stats come live
 from [Leetify](https://leetify.com) and refresh automatically — no software to
 run, no account to make on this site.
 
+> [!TIP]
+> **✨ New features**
+> - **FACEIT support** — point the overlay at your FACEIT stats (ELO, skill
+>   level, and more) alongside Premier
+> - **Live tracking for Kick & YouTube** — per-stream win/loss now works on Kick
+>   and YouTube, not just Twitch
+> - **More stat options** — added **HS%** and **ADR** to the stats you can show
+
 **What viewers see:**
 
 - **Live Premier rating** with a per-tier **rank badge** (Gray, Light Blue, Blue,
