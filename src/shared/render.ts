@@ -16,6 +16,15 @@ function esc(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
+// Directional arrows for the rating change (rank loss/gain). Recreated inline
+// from the Figma "ArrowUpRight" / "ArrowDownRight" icons so the exported widget
+// stays self-contained (no external asset). `currentColor` inherits the diff's
+// positive/negative tint; the viewBox is cropped to the arrow's stroke bounds so
+// it sits tight against the number. To swap in a custom mark, replace the paths
+// here — this is the only place the arrows are defined.
+const DIFF_ARROW_UP = `<svg class="diff-arrow" viewBox="8 8 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 36L36 12" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 12H36V31.5" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const DIFF_ARROW_DOWN = `<svg class="diff-arrow" viewBox="8 8 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 12L36 36" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 36H36V16.5" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 // The Premier rank emblem shown behind the rating when the badge is enabled — a
 // right-leaning parallelogram with the tier's deep fill and two bright "//"
 // slashes on the left, recreated from the Figma badge sheet (prem_1..prem_7).
@@ -73,17 +82,15 @@ export function renderWidget(config: WidgetConfig, data: PremierData): string {
       : `<span class="rating-plain">${ratingText}</span>`;
   }
 
-  // Rating change (Premier: rank-point diff like +250; FACEIT: the session-scoped
-  // ELO swing shown with an arrow, e.g. ↘ 53). Hidden when disabled or zero.
+  // Rating change (rank loss/gain) — the rank-point diff (Premier) or session
+  // ELO swing (FACEIT), shown with a directional arrow and the absolute value
+  // (e.g. ↘ 53 / ↗ 280). Hidden when disabled or zero.
   let diffHtml = '';
   if (config.showChange && data.ratingDiff !== 0) {
     const up = data.ratingDiff > 0;
     const cls = up ? 'positive' : 'negative';
-    if (isFaceit) {
-      diffHtml = `<span class="rating-diff ${cls}">${up ? '↗' : '↘'} ${Math.abs(data.ratingDiff)}</span>`;
-    } else {
-      diffHtml = `<span class="rating-diff ${cls}">${up ? '+' : ''}${data.ratingDiff}</span>`;
-    }
+    const arrow = up ? DIFF_ARROW_UP : DIFF_ARROW_DOWN;
+    diffHtml = `<span class="rating-diff ${cls}">${arrow}${Math.abs(data.ratingDiff)}</span>`;
   }
 
   // Left slot. Premier: the player's avatar (real Steam avatar, or the default

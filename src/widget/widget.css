@@ -121,14 +121,23 @@ body {
 .rank-red       .rating-badge-text { color: #ff4f46; }
 .rank-gold      .rating-badge-text { color: #fddc02; }
 
-/* Rank-point diff (+250) */
+/* Rank loss/gain — a directional arrow (inherits the tint via currentColor)
+   followed by the absolute change. Sized a step below the rating beside it. */
 .rating-diff {
-  font-size: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 24px;
   font-weight: var(--w-weight-strong, 800);
   line-height: 1;
   white-space: nowrap;
 }
-.rating-diff.positive { color: #6fce72; }
+.diff-arrow {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+.rating-diff.positive { color: #5dad60; }
 .rating-diff.negative { color: #d45f5f; }
 
 /* ---- Win / loss pills ---------------------------------------------------- */

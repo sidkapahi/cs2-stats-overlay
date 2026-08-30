@@ -1041,7 +1041,7 @@ function init() {
         <div class="setup-head">
           <div class="brand-block">
             <h1 class="setup-title">CS2 Overlay Widget</h1>
-            <p class="setup-sub">Customize and use your own overlay widget for CS2. Paste your streaming profile (Twitch, YouTube, Kick) for live W/L.</p>
+            <p class="setup-sub">Customize and use your own browser source overlay for Premier or FACEIT. Data provided by <a class="leetify-link" href="https://leetify.com" target="_blank" rel="noopener">Leetify</a></p>
           </div>
           <div class="link-row">
             <a class="link-chip link-repo" data-link="github" href="${REPO_URL}" target="_blank" rel="noopener">${ICON_GITHUB}<span>cs2-stats-overlay</span></a>
@@ -1138,7 +1138,6 @@ function init() {
 
         <div class="setup-foot">
           <img class="foot-logo" src="${brandLogoSrc}" alt="kapKit">
-          <span class="foot-tag">Made with ❤️ in Toronto</span>
           <div class="foot-legal">
             <button type="button" class="foot-link" id="open-privacy">Privacy &amp; Cookies</button>
             <span class="foot-sep" aria-hidden="true">·</span>
