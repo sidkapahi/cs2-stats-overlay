@@ -31,24 +31,20 @@ automatically — no software to run, no account to make here.
 
 > [!TIP]
 > **✨ New features**
-> - **FACEIT support** — point the overlay at your FACEIT stats (ELO, skill
->   level, and more) alongside Premier
-> - **Live tracking for Kick & YouTube** — per-stream win/loss now works on Kick
->   and YouTube, not just Twitch
-> - **More stat options** — added **HS%** and **ADR** to the stats you can show
+> - **FACEIT support** — show FACEIT ELO and skill level
+> - **Live tracking on Kick & YouTube** — not just Twitch
+> - **HS% and ADR** added to the stats you can show
 
 **What viewers see:**
 
-- **Live Premier rating** with a per-tier **rank badge** (Gray, Light Blue, Blue,
-  Purple, Pink, Red, Gold) — or a plain rank-coloured number if you prefer
-- **Rank-point change** from your last Premier match (e.g. `+250`)
-- **Win / loss pills** and core stats: win rate, aim rating, K/D
-- **Recent match-history strip** (W / L / T)
-- **Live session W/L** (optional, Twitch / YouTube / Kick) — resets when you go
-  live, freezes when you go offline, so it tracks *today's* stream
-- **Transparent background** that sits on any layout
+- **Premier rating** with a **rank badge**, or a plain rank-coloured number
+- **Rank-point change** from your last match (e.g. `+250`)
+- **Win / loss pills** and stats: win rate, aim rating, K/D
+- **Recent match history** (W / L / T)
+- **Live session W/L** (optional, Twitch / YouTube / Kick)
+- **Transparent background**
 
-Everything's toggleable — run a minimal rating-only badge or the full card.
+Everything's toggleable.
 
 ## How-To Guide
 
