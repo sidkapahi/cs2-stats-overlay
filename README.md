@@ -60,31 +60,21 @@ builds your URL for you.
 
 ### Before you start
 
-The overlay can pull from two sources — **Premier** (via Leetify) or your
-**FACEIT** profile. You can use either one, or both.
+Pick a source — **Premier** (via Leetify) or **FACEIT**. Use either, or both.
 
-**Everyone needs:**
+**Everyone:** your **Steam profile link** or Steam64 ID. FACEIT stats are looked
+up from the same profile.
 
-- **Your Steam profile link** (or Steam64 ID). Paste your profile URL into the
-  customizer and it pulls the ID out for you. A `steamcommunity.com/profiles/…`
-  link or a raw Steam64 ID works out of the box. FACEIT stats are looked up from
-  the same Steam profile.
+**For Premier:** a [Leetify](https://leetify.com) account linked to Steam, plus a
+matchmaking share code so it syncs matches:
 
-**For Premier stats**, you'll need your CS2 stats flowing into Leetify:
+1. Get your Authentication Code from
+   [Steam](https://help.steampowered.com/en/wizard/HelpWithGameIssue?appid=730&issueid=128)
+2. Enter it on Leetify's [Data Sources](https://leetify.com/app/data-sources)
+   page under the **Matchmaking** tab
 
-- **A [Leetify](https://leetify.com) account** connected to your Steam account,
-  with match tracking enabled.
-- **A matchmaking share code** so Leetify syncs your matches automatically:
-  1. Get your Authentication Code from
-     [Steam](https://help.steampowered.com/en/wizard/HelpWithGameIssue?appid=730&issueid=128)
-  2. Enter it on Leetify's [Data Sources](https://leetify.com/app/data-sources)
-     page under the **Matchmaking** tab
-  3. Leetify then picks up your matches shortly after each one finishes
-
-**For FACEIT stats**, you'll need a **[FACEIT](https://www.faceit.com) account
-linked to the same Steam account** you entered above — no Leetify required. Then
-just flip the **FACEIT** toggle in the customizer to show your ELO, skill level,
-and more.
+**For FACEIT:** a [FACEIT](https://www.faceit.com) account linked to the same
+Steam account — no Leetify needed. Flip the **FACEIT** toggle in the customizer.
 
 ### Create your overlay
 
