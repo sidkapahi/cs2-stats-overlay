@@ -84,11 +84,6 @@ Steam account — no Leetify needed. Flip the **FACEIT** toggle in the customize
 6. *(Optional)* For a per-stream win/loss, switch the Win/Loss source to **Live Session** and add a profile link (Twitch, YouTube, or Kick)
 7. Copy the generated **widget URL** (or download the StreamElements bundle — see below)
 
-> [!NOTE]
-> **FACEIT mode** needs the FACEIT proxy Worker deployed (a free FACEIT Data API
-> key on Cloudflare). See [worker/README.md](worker/README.md#faceit-proxy-cloudflare-worker).
-> Premier mode needs no setup.
-
 ### Add it to OBS/Streamlabs OBS
 
 1. Add a new **Browser Source**
@@ -106,10 +101,6 @@ file into its matching tab in the Custom Widget editor (HTML / CSS / JS / FIELDS
 / DATA). Fields come pre-filled and stay editable **inside StreamElements** —
 Steam ID, toggles, stats, font, background — so you can tweak it there without
 returning to the customizer.
-
-> [!NOTE]
-> There's no server behind this site, so it can't push an overlay straight into
-> your StreamElements account. The bundle is that same setup, pre-filled.
 
 ### Live session win/loss (optional)
 
