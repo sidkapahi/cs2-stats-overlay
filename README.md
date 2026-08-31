@@ -60,7 +60,17 @@ builds your URL for you.
 
 ### Before you start
 
-You'll need your CS2 stats flowing into Leetify:
+The overlay can pull from two sources — **Premier** (via Leetify) or your
+**FACEIT** profile. You can use either one, or both.
+
+**Everyone needs:**
+
+- **Your Steam profile link** (or Steam64 ID). Paste your profile URL into the
+  customizer and it pulls the ID out for you. A `steamcommunity.com/profiles/…`
+  link or a raw Steam64 ID works out of the box. FACEIT stats are looked up from
+  the same Steam profile.
+
+**For Premier stats**, you'll need your CS2 stats flowing into Leetify:
 
 - **A [Leetify](https://leetify.com) account** connected to your Steam account,
   with match tracking enabled.
@@ -70,9 +80,11 @@ You'll need your CS2 stats flowing into Leetify:
   2. Enter it on Leetify's [Data Sources](https://leetify.com/app/data-sources)
      page under the **Matchmaking** tab
   3. Leetify then picks up your matches shortly after each one finishes
-- **Your Steam profile link** (or Steam64 ID). Paste your profile URL into the
-  customizer and it pulls the ID out for you. A `steamcommunity.com/profiles/…`
-  link or a raw Steam64 ID works out of the box.
+
+**For FACEIT stats**, you'll need a **[FACEIT](https://www.faceit.com) account
+linked to the same Steam account** you entered above — no Leetify required. Then
+just flip the **FACEIT** toggle in the customizer to show your ELO, skill level,
+and more.
 
 ### Create your overlay
 
