@@ -67,7 +67,28 @@ export function classifyFetchError(e: unknown): string {
   if (/No Premier rank/i.test(msg)) return 'no_premier';
   if (/recognise that custom URL|recognize that custom URL/i.test(msg)) return 'vanity_not_found';
   if (/reach the Steam resolver|resolve custom URL|need the Steam proxy/i.test(msg)) return 'resolver_error';
+  // A fetch that never got an HTTP response — the API host was unreachable (DNS,
+  // CORS, offline, a proxy cold start, or an ad/tracking blocker eating the
+  // request). Browsers word this differently: "Failed to fetch" (Chromium, so
+  // OBS's CEF browser source), "NetworkError when attempting to fetch resource"
+  // (Firefox), "Load failed" (Safari); our proxy wrappers rethrow it as
+  // "Failed to reach the … proxy". These used to fall into `other`, hiding what
+  // is in practice the single most common overlay failure.
+  if (/Failed to fetch|NetworkError|Load failed|Failed to reach/i.test(msg)) return 'network_error';
   return 'other';
+}
+
+// A short, PII-free description of a failure, attached as `detail` on error
+// analytics so the `other` bucket (and any future misclassification) is
+// diagnosable instead of opaque. The messages we throw never contain the Steam
+// ID — they're HTTP status strings ("API error: 500"), fixed copy ("No Premier
+// rank found"), or the browser's own network-failure text — so the message is
+// safe to send as-is. Truncated defensively so a freak long message can't bloat
+// the event.
+export function errorDetail(e: unknown): string {
+  const name = e instanceof Error && e.name ? e.name : '';
+  const msg = e instanceof Error ? e.message : String(e);
+  return `${name ? name + ': ' : ''}${msg}`.slice(0, 140);
 }
 
 export async function fetchPremierData(steamId: string): Promise<PremierData> {

@@ -31,7 +31,7 @@ YouTube, or Kick handle) is the only identifying value we attach anywhere.
 | `steam_id_entered` | A typed Steam ID / profile link successfully resolves | — |
 | `live_selected` | A valid live channel is entered (once per new channel) | `platform` — `twitch` \| `youtube` \| `kick`; `channel` — the public handle |
 | `social_click` | A header link is clicked | `target` — `github` \| `kofi` \| `twitch` |
-| `preview_error` | The live preview fails to load | `stage` — `resolve` \| `stats`; `reason` — see [reason codes](#error-reason-codes) |
+| `preview_error` | The live preview fails to load | `stage` — `resolve` \| `stats`; `reason` — see [reason codes](#error-reason-codes); `detail` — short PII-free error text; `provider` — `leetify` \| `faceit` |
 | `widget_url_copied` | "Copy URL" is clicked | the [settings properties](#settings-properties) |
 | `export_zip_downloaded` | "Export ZIP" is clicked | the [settings properties](#settings-properties) |
 
@@ -41,7 +41,7 @@ YouTube, or Kick handle) is the only identifying value we attach anywhere.
 | --- | --- | --- |
 | `overlay_active` | The overlay loads in OBS (once per load) | `live` — `true` if a live session is active; `platform` — `twitch` \| `youtube` \| `kick` \| `''` |
 | `live_session_started` | The stream goes live and a new W/L session begins (once per go-live; an OBS refresh doesn't re-count) | `platform` — the live platform |
-| `overlay_error` | A stats fetch fails — fires **once per outage episode**, not every poll | `reason` — see [reason codes](#error-reason-codes) |
+| `overlay_error` | A stats fetch fails **and a retry ~2s later also fails** — fires **once per outage episode**, not every poll | `reason` — see [reason codes](#error-reason-codes); `detail` — short PII-free error text (diagnoses the `other` bucket); `provider` — `leetify` \| `faceit` |
 
 > The overlay is cookieless, so each load looks like a new anonymous visitor.
 > These are **counts**, not unique-user figures.
@@ -70,7 +70,9 @@ someone built:
 
 ## Error reason codes
 
-Attached as `reason` on `preview_error` and `overlay_error`:
+Attached as `reason` on `preview_error` and `overlay_error`. Both events also
+carry a `detail` (a short, PII-free copy of the underlying error message) so an
+`other` — or a misclassified — failure is diagnosable instead of opaque.
 
 | `reason` | Meaning | Actionable? |
 | --- | --- | --- |
@@ -78,10 +80,11 @@ Attached as `reason` on `preview_error` and `overlay_error`:
 | `api_rate_limited` | Leetify returned 429 — we're being throttled | Yes — consider a Leetify API key |
 | `api_404` | Leetify returned 404 | Maybe |
 | `api_<status>` | Any other Leetify HTTP status | Depends |
+| `network_error` | The fetch got no HTTP response — API host unreachable (DNS, CORS, offline, proxy cold start, or an ad/tracking blocker eating the request) | Maybe — often the viewer's own network/blocker; a spike across many machines points at the proxy or a blocked host |
 | `no_premier` | The profile has no Premier data | No — expected user state, not a bug |
 | `vanity_not_found` | A custom `/id/` vanity URL didn't resolve | No — user typo |
 | `resolver_error` | The Steam vanity-resolver proxy is unreachable/misconfigured | Yes — check the Worker |
-| `other` | Anything uncategorized | Investigate |
+| `other` | Anything uncategorized — read `detail` to see what it was | Investigate |
 
 ---
 
@@ -159,4 +162,4 @@ remove the managed-proxy domain + CNAME.
 | [`src/customizer/customizer.ts`](../src/customizer/customizer.ts) | Fires the customizer events + the consent banner/modal |
 | [`src/widget/widget.ts`](../src/widget/widget.ts) | Fires the overlay events |
 
-_Last updated: 2026-08-26._
+_Last updated: 2026-09-01._
