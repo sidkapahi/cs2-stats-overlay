@@ -25,6 +25,11 @@ jobs:
       - run: npm run build
         env:
           VITE_LEETIFY_KEY: ${{ secrets.VITE_LEETIFY_KEY }}
+          # Public URL of the Leetify proxy Worker (worker/leetify-proxy.js).
+          # Leetify's public API sends no CORS headers, so the browser can't call
+          # it directly — this Worker is what makes Premier mode work in a browser.
+          # Not a secret, so a repository variable is the natural home.
+          VITE_LEETIFY_PROXY_URL: ${{ vars.VITE_LEETIFY_PROXY_URL || secrets.VITE_LEETIFY_PROXY_URL }}
           # Public URL of the optional Steam avatar proxy Worker (worker/README.md).
           # Not a secret, so a repository variable is the natural home, but a
           # secret with the same name works too.
