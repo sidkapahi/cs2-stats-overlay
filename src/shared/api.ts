@@ -10,6 +10,38 @@ const API_BASE = 'https://api-public.cs-prod.leetify.com/v3/profile';
 const MATCHES_BASE = 'https://api-public.cs-prod.leetify.com/v3/profile/matches';
 const LEETIFY_KEY = import.meta.env.VITE_LEETIFY_KEY as string | undefined;
 
+// Optional Leetify proxy Worker (worker/leetify-proxy.js). Leetify's public API
+// sends NO CORS headers, so a browser — including OBS's Chromium browser source —
+// can't read its responses directly: the fetch is blocked before any status is
+// seen and surfaces as "Failed to fetch", the single most common overlay failure.
+// When this is set the widget goes through the Worker instead, which adds CORS and
+// keeps the (optional) API key server-side. When it's unset we fall back to the
+// direct call — which works from non-browser tooling but is blocked in a browser.
+const LEETIFY_PROXY = import.meta.env.VITE_LEETIFY_PROXY_URL as string | undefined;
+
+// Builds the request for a Leetify lookup. Through the proxy Worker when one is
+// configured (the profile at `?steam64_id=…`, the match list at the same URL
+// with `&matches=1`), otherwise straight to Leetify's API with the optional key
+// header. Keeping both shapes here means fetchPremierData/enrichWithKills don't
+// have to know which mode is active.
+function leetifyRequest(
+  kind: 'profile' | 'matches',
+  steamId: string,
+): { url: string; init: RequestInit } {
+  const id = encodeURIComponent(steamId);
+  if (LEETIFY_PROXY) {
+    const sep = LEETIFY_PROXY.includes('?') ? '&' : '?';
+    const suffix = kind === 'matches' ? '&matches=1' : '';
+    // `cache: no-store` so a stale/cached proxy error can't keep masking a fixed
+    // Worker (the same reasoning as the vanity/avatar proxies).
+    return { url: `${LEETIFY_PROXY}${sep}steam64_id=${id}${suffix}`, init: { cache: 'no-store' } };
+  }
+  const base = kind === 'matches' ? MATCHES_BASE : API_BASE;
+  const headers: Record<string, string> = {};
+  if (LEETIFY_KEY) headers._leetify_key = LEETIFY_KEY;
+  return { url: `${base}?steam64_id=${id}`, init: { headers } };
+}
+
 // Optional Steam avatar proxy (a small Cloudflare Worker — see worker/README.md).
 // Leetify's public API doesn't return an avatar, and the browser can't call
 // Steam's Web API directly (needs a secret key, no CORS), so when this is set
@@ -92,10 +124,16 @@ export function errorDetail(e: unknown): string {
 }
 
 export async function fetchPremierData(steamId: string): Promise<PremierData> {
-  const headers: Record<string, string> = {};
-  if (LEETIFY_KEY) headers._leetify_key = LEETIFY_KEY;
-
-  const res = await fetch(`${API_BASE}?steam64_id=${encodeURIComponent(steamId)}`, { headers });
+  const { url, init } = leetifyRequest('profile', steamId);
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch {
+    // A fetch that never got an HTTP response. Word it after what was actually
+    // called so the message points at the real culprit; classifyFetchError maps
+    // both phrasings to `network_error`.
+    throw new Error(LEETIFY_PROXY ? 'Failed to reach the Leetify proxy' : 'Failed to fetch');
+  }
   if (!res.ok) throw new Error(`API error: ${res.status}`);
 
   const data: LeetifyProfile = await res.json();
@@ -111,7 +149,7 @@ export async function fetchPremierData(steamId: string): Promise<PremierData> {
     // configured we resolve it from the Steam Web API; otherwise this stays blank
     // and config.showAvatar hides the avatar slot entirely.
     fetchAvatarUrl(steamId),
-    enrichWithKills(steamId, recentGames, headers),
+    enrichWithKills(steamId, recentGames),
   ]);
   // Premier rank-point swing: the profile payload has no historical deltas, but
   // each match carries the CS Rating it ended at, so the diff between the two
@@ -181,13 +219,10 @@ export async function fetchPremierData(steamId: string): Promise<PremierData> {
 async function enrichWithKills(
   steamId: string,
   matches: LeetifyMatch[],
-  headers: Record<string, string>,
 ): Promise<void> {
   try {
-    const res = await fetch(
-      `${MATCHES_BASE}?steam64_id=${encodeURIComponent(steamId)}`,
-      { headers },
-    );
+    const { url, init } = leetifyRequest('matches', steamId);
+    const res = await fetch(url, init);
     if (!res.ok) return;
     const details = (await res.json()) as LeetifyMatchDetails[];
 

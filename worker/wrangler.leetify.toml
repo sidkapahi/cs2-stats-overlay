@@ -1,0 +1,9 @@
+# Cloudflare Worker config for the Leetify proxy.
+#
+# Deploy:   wrangler deploy --config wrangler.leetify.toml
+# Add key:  wrangler secret put LEETIFY_KEY --config wrangler.leetify.toml
+#           (optional — only raises rate limits; never commit the key)
+
+name = "leetify-proxy"
+main = "leetify-proxy.js"
+compatibility_date = "2024-11-01"

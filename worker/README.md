@@ -54,6 +54,52 @@ That's it. The widget calls `GET {VITE_AVATAR_PROXY_URL}?steam64_id=<id>` and
 renders the returned avatar. The **Steam key stays on Cloudflare** and never
 reaches the browser.
 
+# Leetify proxy (Cloudflare Worker)
+
+Powers **Premier mode** (the default `PREMIER | FACEIT` toggle). Leetify's public
+API (`api-public.cs-prod.leetify.com`) sends **no CORS headers**, so the static
+site can't read its responses from a browser — the fetch is blocked before any
+HTTP status is seen and surfaces as **"Failed to fetch"** (the same in OBS's
+Chromium browser source). This Worker (`leetify-proxy.js`) sits in front of the
+two endpoints the Premier path needs, adds CORS so the browser can read them,
+and keeps the (optional) Leetify API key server-side:
+
+- `GET ?steam64_id=<id>` → the profile payload (identity, ranks, recent matches).
+- `GET ?steam64_id=<id>&matches=1` → the match list (per-match kills/deaths).
+
+It's effectively **required for Premier mode in a browser**. Without it the
+widget falls back to calling Leetify directly, which works from non-browser
+tooling but a browser blocks — so Premier mode shows "Failed to fetch".
+
+## Deploy
+
+1. **(Optional) get a Leetify API key** from <https://leetify.com> — it only
+   raises rate limits; the public API works without one.
+
+2. **Deploy the Worker** with [Wrangler](https://developers.cloudflare.com/workers/wrangler/):
+
+   ```bash
+   cd worker
+   npx wrangler deploy --config wrangler.leetify.toml
+   ```
+
+   (Or create a Worker in the Cloudflare dashboard and paste in `leetify-proxy.js`.)
+
+3. **(Optional) add your key as a secret** — never commit it:
+
+   ```bash
+   npx wrangler secret put LEETIFY_KEY --config wrangler.leetify.toml
+   ```
+
+   (Dashboard equivalent: your Worker → Settings → Variables and Secrets → add a
+   **secret** named `LEETIFY_KEY`.)
+
+4. **Point the widget at the Worker** via a repository **variable** (or
+   `.env.local` for local dev) named `VITE_LEETIFY_PROXY_URL`. The URL is not
+   sensitive — it gets inlined into the public bundle — so a plain repository
+   *variable* is fine. When the proxy is used the API key lives **only on the
+   Worker**, never in the browser bundle.
+
 # FACEIT proxy (Cloudflare Worker)
 
 Powers the widget's **FACEIT mode** (the `PREMIER | FACEIT` toggle in the
@@ -204,14 +250,29 @@ it also does when that Worker isn't deployed at all.
 
 **Every** Worker gates browser requests by an `ALLOWED_ORIGINS` set at the top of
 its file — that's what stops other websites from spending your keys / quota.
-Edit that list in each of `steam-avatar-proxy.js`, `faceit-proxy.js`,
-`twitch-live-proxy.js`, `youtube-live-proxy.js`, and `kick-live-proxy.js`
+Edit that list in each of `leetify-proxy.js`, `steam-avatar-proxy.js`,
+`faceit-proxy.js`, `twitch-live-proxy.js`, `youtube-live-proxy.js`, and
+`kick-live-proxy.js`
 (scheme + host only, no trailing slash) to match wherever the widget is hosted,
 e.g.
 `https://<you>.github.io`, plus `http://localhost:5173` for local dev. After
 changing it, redeploy that Worker.
 
 ## Response shape
+
+**Leetify profile / matches** (`leetify-proxy.js`) — a thin pass-through of
+Leetify's public API, so the bodies are Leetify's own, forwarded verbatim with
+CORS added:
+
+```
+GET /?steam64_id=76561198123894701             → 200 <v3/profile payload>
+GET /?steam64_id=76561198123894701&matches=1   → 200 <v3/profile/matches payload>
+```
+
+An invalid or missing `steam64_id` returns `400`; if Leetify itself is
+unreachable the Worker returns `502`. Any other upstream status (e.g. Leetify's
+own `404`/`5xx`) is forwarded as-is. Successful responses are cached ~30s;
+errors are never cached.
 
 **Avatar lookup:**
 
