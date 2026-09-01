@@ -9,6 +9,7 @@ import {
 } from "../shared/analytics";
 import {
   classifyFetchError,
+  errorDetail,
   fetchPremierData,
   resolveVanityUrl,
   type PremierData,
@@ -246,7 +247,12 @@ async function resolveAndLoad(rawInput: string) {
       steamId = await resolveAccountToSteamId(parsed);
     } catch (e) {
       if (token !== resolveToken) return; // superseded by newer input
-      trackEvent("preview_error", { stage: "resolve", reason: classifyFetchError(e) });
+      trackEvent("preview_error", {
+        stage: "resolve",
+        reason: classifyFetchError(e),
+        detail: errorDetail(e),
+        provider: currentConfig.provider,
+      });
       previewError = e instanceof Error ? e.message : "Failed to resolve";
       previewData = null;
       previewLoading = false;
@@ -321,7 +327,12 @@ async function loadPreview(token = ++resolveToken) {
     }
   } catch (e) {
     if (token !== resolveToken) return; // superseded by newer input
-    trackEvent("preview_error", { stage: "stats", reason: classifyFetchError(e) });
+    trackEvent("preview_error", {
+      stage: "stats",
+      reason: classifyFetchError(e),
+      detail: errorDetail(e),
+      provider: currentConfig.provider,
+    });
     previewError = e instanceof Error ? e.message : "Failed to load";
     previewData = null;
   }

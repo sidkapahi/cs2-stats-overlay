@@ -1,5 +1,5 @@
 import { initOverlayAnalytics, trackOverlayEvent } from '../shared/analyticsOverlay';
-import { classifyFetchError, fetchPremierData, type PremierData } from '../shared/api';
+import { classifyFetchError, errorDetail, fetchPremierData, type PremierData } from '../shared/api';
 import { fetchFaceitData } from '../shared/faceit';
 import { faceitHistoryCount, paramsToConfig } from '../shared/config';
 import { loadFont } from '../shared/fonts';
@@ -20,6 +20,8 @@ import './widget.css';
 // Workers cache their upstream calls, so a 15s (4/min) poll stays cheap even on
 // YouTube's tight API quota.
 const LIVE_POLL_INTERVAL = 15;
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function init() {
   const container = document.getElementById('app')!;
@@ -101,24 +103,47 @@ async function init() {
     container.innerHTML = renderWidget(config, data);
   }
 
+  const fetchStats = () =>
+    config.provider === 'faceit'
+      ? fetchFaceitData(config.steamId, faceitHistoryCount(config))
+      : fetchPremierData(config.steamId);
+
   async function updateStats() {
-    try {
-      lastData =
-        config.provider === 'faceit'
-          ? await fetchFaceitData(config.steamId, faceitHistoryCount(config))
-          : await fetchPremierData(config.steamId);
-      statsHealthy = true;
-      render();
-    } catch (e) {
-      // Fire once per outage episode (on the healthy→failing transition), so a
-      // sustained outage doesn't emit an event on every refresh.
-      if (statsHealthy) trackOverlayEvent('overlay_error', { reason: classifyFetchError(e) });
-      statsHealthy = false;
-      // Keep the last good render if we already have one; only show the error
-      // state on the very first failure.
-      if (!lastData) {
-        container.innerHTML = renderMessage('Error', e instanceof Error ? e.message : 'Failed to fetch');
+    let lastError: unknown;
+    // Retry once after a short backoff before declaring an outage. A lone
+    // failure on a single poll — a transient network blip or a proxy cold start,
+    // both common in OBS's browser source — shouldn't count as an error episode;
+    // only a failure that survives the retry is treated as real.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        lastData = await fetchStats();
+        statsHealthy = true;
+        render();
+        return;
+      } catch (e) {
+        lastError = e;
+        if (attempt === 0) await delay(2000);
       }
+    }
+    // Both attempts failed — a genuine outage. Fire once per episode (on the
+    // healthy→failing transition), so a sustained outage doesn't emit an event
+    // on every refresh. `detail` and `provider` make an otherwise-opaque
+    // `other`/`network_error` diagnosable.
+    if (statsHealthy) {
+      trackOverlayEvent('overlay_error', {
+        reason: classifyFetchError(lastError),
+        detail: errorDetail(lastError),
+        provider: config.provider,
+      });
+    }
+    statsHealthy = false;
+    // Keep the last good render if we already have one; only show the error
+    // state on the very first failure.
+    if (!lastData) {
+      container.innerHTML = renderMessage(
+        'Error',
+        lastError instanceof Error ? lastError.message : 'Failed to fetch',
+      );
     }
   }
 
