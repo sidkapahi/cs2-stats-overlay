@@ -48,7 +48,7 @@ import "../widget/widget.css";
 import "./customizer.css";
 
 // External links for the header button row.
-const REPO_URL = "https://github.com/sidkapahi/cs2-stats-overlay";
+const REPO_URL = "https://github.com/sidkapahi/kapkit-cs2overlay";
 const KOFI_URL = "https://ko-fi.com/kapahi";
 const TWITCH_URL = "https://twitch.tv/kapowhi";
 
@@ -1055,7 +1055,7 @@ function init() {
             <p class="setup-sub">Customize and use your own browser source overlay for Premier or FACEIT. Data provided by <a class="leetify-link" href="https://leetify.com" target="_blank" rel="noopener">Leetify</a></p>
           </div>
           <div class="link-row">
-            <a class="link-chip link-repo" data-link="github" href="${REPO_URL}" target="_blank" rel="noopener">${ICON_GITHUB}<span>cs2-stats-overlay</span></a>
+            <a class="link-chip link-repo" data-link="github" href="${REPO_URL}" target="_blank" rel="noopener">${ICON_GITHUB}<span>kapkit-cs2overlay</span></a>
             <a class="link-chip link-kofi" data-link="kofi" href="${KOFI_URL}" target="_blank" rel="noopener" aria-label="Ko-fi">${ICON_KOFI}</a>
             <a class="link-chip link-twitch" data-link="twitch" href="${TWITCH_URL}" target="_blank" rel="noopener" aria-label="Twitch">${ICON_TWITCH}</a>
           </div>
