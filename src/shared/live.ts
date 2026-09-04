@@ -6,7 +6,12 @@
 // API, and answers a single lookup: `GET {PROXY}?<param>=<channel>` → { live }.
 // The widget just picks the proxy for the configured platform and asks it.
 
+import { fetchWithTimeout } from './fetchWithTimeout';
 import type { LivePlatform } from './types';
+
+// The live check polls every 15s, so cap a stalled request well under that to
+// avoid one hung poll overlapping the next.
+const LIVE_FETCH_TIMEOUT_MS = 10000;
 
 // Proxy Worker URL per platform, injected at build time. Any left unset simply
 // disables that platform's live check (the widget falls back to rolling W/L).
@@ -42,9 +47,10 @@ export async function fetchLive(
   const proxy = PROXIES[platform];
   if (!proxy) return null;
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `${proxy}?${PARAMS[platform]}=${encodeURIComponent(channel)}`,
       { cache: 'no-store' },
+      LIVE_FETCH_TIMEOUT_MS,
     );
     if (!res.ok) return null;
     const body = (await res.json()) as { live?: unknown };
