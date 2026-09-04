@@ -1,4 +1,5 @@
 import type { PremierData } from './api';
+import { fetchWithTimeout } from './fetchWithTimeout';
 import type { LeetifyGame } from './types';
 
 // FACEIT provider client. The static site can't call the FACEIT Data API
@@ -76,7 +77,7 @@ export async function resolveFaceitNickname(nickname: string): Promise<string> {
   }
   let res: Response;
   try {
-    res = await fetch(`${FACEIT_PROXY}?nickname=${encodeURIComponent(nick)}`, { cache: 'no-store' });
+    res = await fetchWithTimeout(`${FACEIT_PROXY}?nickname=${encodeURIComponent(nick)}`, { cache: 'no-store' });
   } catch {
     throw new Error('Failed to reach the FACEIT proxy');
   }
@@ -106,7 +107,7 @@ export async function fetchFaceitData(steamId: string, history?: number): Promis
 
   let res: Response;
   try {
-    res = await fetch(`${FACEIT_PROXY}?${params.toString()}`, { cache: 'no-store' });
+    res = await fetchWithTimeout(`${FACEIT_PROXY}?${params.toString()}`, { cache: 'no-store' });
   } catch {
     throw new Error('Failed to reach the FACEIT proxy');
   }

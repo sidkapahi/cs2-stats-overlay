@@ -67,6 +67,10 @@ async function init() {
   // pollers and reconciled by render().
   let lastData: PremierData | null = null;
   let lastLive: boolean | null = null;
+  // When the last stats refresh was *kicked off* (ms epoch). Used to throttle the
+  // wake-driven catch-up refreshes below so they don't stack on the interval or
+  // on each other while still recovering promptly after the timer was frozen.
+  let lastStatsAttempt = 0;
   // Tracks fetch health so an outage fires overlay_error once (on the failing
   // transition), not on every poll while Leetify stays down.
   let statsHealthy = true;
@@ -109,6 +113,7 @@ async function init() {
       : fetchPremierData(config.steamId);
 
   async function updateStats() {
+    lastStatsAttempt = Date.now();
     let lastError: unknown;
     // Retry once after a short backoff before declaring an outage. A lone
     // failure on a single poll — a transient network blip or a proxy cold start,
@@ -162,6 +167,28 @@ async function init() {
 
   setInterval(updateStats, config.refreshInterval * 1000);
   if (sessionMode) setInterval(updateLive, LIVE_POLL_INTERVAL * 1000);
+
+  // OBS renders each browser source in Chromium, which aggressively throttles —
+  // and can outright freeze — a page's timers while its source is hidden,
+  // occluded by another scene, or backgrounded. The interval above then stops
+  // firing, so the on-screen stats sit frozen at their last values with no
+  // error (the fetch code is fine — a manual source refresh always fixes it).
+  // Refetch immediately whenever the source comes back to the foreground so the
+  // overlay self-heals the way a manual refresh would, with no visible change.
+  // The throttle keeps a burst of these events (or one firing right after an
+  // interval poll) from hammering the API.
+  function refreshOnWake() {
+    if (document.visibilityState === 'hidden') return;
+    if (Date.now() - lastStatsAttempt < LIVE_POLL_INTERVAL * 1000) return;
+    updateStats();
+    if (sessionMode) updateLive();
+  }
+  document.addEventListener('visibilitychange', refreshOnWake);
+  // `pageshow` covers a restore from the bfcache; `focus`/`online` cover the
+  // browser-tab and Streamlabs cases where visibilitychange may not fire.
+  window.addEventListener('pageshow', refreshOnWake);
+  window.addEventListener('focus', refreshOnWake);
+  window.addEventListener('online', refreshOnWake);
 }
 
 init();

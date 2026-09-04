@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from './fetchWithTimeout';
 import type { LeetifyGame, LeetifyMatch, LeetifyMatchDetails, LeetifyProfile } from './types';
 
 // Leetify's real, documented Public API (see https://api-public-docs.cs-prod.leetify.com/).
@@ -127,11 +128,12 @@ export async function fetchPremierData(steamId: string): Promise<PremierData> {
   const { url, init } = leetifyRequest('profile', steamId);
   let res: Response;
   try {
-    res = await fetch(url, init);
+    res = await fetchWithTimeout(url, init);
   } catch {
-    // A fetch that never got an HTTP response. Word it after what was actually
-    // called so the message points at the real culprit; classifyFetchError maps
-    // both phrasings to `network_error`.
+    // A fetch that never got an HTTP response — the host was unreachable, or the
+    // request stalled on a dead socket and hit our timeout. Word it after what
+    // was actually called so the message points at the real culprit;
+    // classifyFetchError maps both phrasings to `network_error`.
     throw new Error(LEETIFY_PROXY ? 'Failed to reach the Leetify proxy' : 'Failed to fetch');
   }
   if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -222,7 +224,7 @@ async function enrichWithKills(
 ): Promise<void> {
   try {
     const { url, init } = leetifyRequest('matches', steamId);
-    const res = await fetch(url, init);
+    const res = await fetchWithTimeout(url, init);
     if (!res.ok) return;
     const details = (await res.json()) as LeetifyMatchDetails[];
 
@@ -264,7 +266,7 @@ export async function resolveVanityUrl(vanity: string): Promise<string> {
     // response for this URL. An out-of-date Worker used to send its errors with
     // a 1-hour max-age, and that stale error would otherwise keep masking a
     // Worker that's since been fixed.
-    res = await fetch(`${AVATAR_PROXY}?vanity=${encodeURIComponent(vanity)}`, {
+    res = await fetchWithTimeout(`${AVATAR_PROXY}?vanity=${encodeURIComponent(vanity)}`, {
       cache: "no-store",
     });
   } catch {
@@ -305,7 +307,7 @@ export async function resolveVanityUrl(vanity: string): Promise<string> {
 async function fetchAvatarUrl(steamId: string): Promise<string> {
   if (!AVATAR_PROXY) return '';
   try {
-    const res = await fetch(`${AVATAR_PROXY}?steam64_id=${encodeURIComponent(steamId)}`);
+    const res = await fetchWithTimeout(`${AVATAR_PROXY}?steam64_id=${encodeURIComponent(steamId)}`);
     if (!res.ok) return '';
     const body = (await res.json()) as { avatarUrl?: unknown };
     return typeof body.avatarUrl === 'string' ? body.avatarUrl : '';
